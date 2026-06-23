@@ -35,12 +35,9 @@ workflow WF_HUMVAR {
 
 process RUN_WF_HUMVAR {
     tag { "wf-human-variation.${sample_name}" }
-    cpus 4
-    memory '32 GB'
-    time '12h'
     cache 'lenient'  // Cache outputs even if the process script changes (since the script is just a wrapper around a stable wf-human-variation run dir)
-    storeDir { file("${params.out_dir}/${sample_name}/.nextflow_cache").toAbsolutePath() }
-    publishDir "${params.out_dir}/${params.sample}/wf-humvar-run", mode: 'copy'
+    storeDir { file("${params.sample_outdir}/.nextflow_cache").toAbsolutePath() }
+    publishDir "${params.sample_outdir}/wf-humvar-run", mode: 'copy'
 
     // ======== WARNING ========
     // storeDir won't re-run if inputs change but outputs already exist
@@ -63,8 +60,8 @@ process RUN_WF_HUMVAR {
     // humvar_run_dir is OUTSIDE the task work dir so it is stable across
     // outer pipeline retries — this is what allows -resume to work on the
     // nested wf-human-variation run.
-    // def humvar_run_dir = "${params.out_dir}/${params.sample}/wf-humvar-run"
-    def humvar_run_dir  = file("${params.out_dir}/${sample_name}/wf-humvar-run").toAbsolutePath()
+    // def humvar_run_dir = "${params.sample_outdir}/wf-humvar-run"
+    def humvar_run_dir  = file("${params.sample_outdir}/wf-humvar-run").toAbsolutePath()
     def wfhumvar_dir    = file("${projectDir}/modules/wf_humvar/wf-human-variation").toAbsolutePath()
     def wfhumvar_tag    = "v2.6.0"
     """
@@ -115,7 +112,6 @@ process RUN_WF_HUMVAR {
         --ref ${ref} \
         --bed ${targets} \
         --sample_name ${sample_name} \
-        --project_name ${project_name} \
         --out_dir wf-humvar \
         --sv \
         --snp \

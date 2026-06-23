@@ -10,7 +10,7 @@ process combine_bedmethyls {
     memory '8 GB'
     time '1h'
     container "file://${projectDir}/containers/general.sif"
-    publishDir "${params.out_dir}/${params.sample}/mod_calling", mode: 'copy'
+    publishDir "${params.sample_outdir}/mod_calling", mode: 'copy'
     input:
         path b1
         path b2
@@ -31,7 +31,7 @@ process convert_bedmethyl_to_DSS {
     errorStrategy { task.exitStatus in [137, 138, 139, 140, 143] ? 'retry' : 'terminate' }  // Retry on common OOM exit codes, with increasing memory on each retry
     maxRetries 5
     container "file://${projectDir}/containers/general.sif"
-    publishDir "${params.out_dir}/${params.sample}/mod_calling", mode: 'copy'
+    publishDir "${params.sample_outdir}/mod_calling", mode: 'copy'
     input:
         path bed
     output:
@@ -50,7 +50,7 @@ process prep_for_getting_betas {
     errorStrategy { task.exitStatus in [137, 138, 139, 140, 143] ? 'retry' : 'terminate' }  // Retry on common OOM exit codes, with increasing memory on each retry
     maxRetries 5
     container "file://${projectDir}/containers/general.sif"
-    publishDir "${params.out_dir}/${params.sample}/mod_calling", mode: 'copy'
+    publishDir "${params.sample_outdir}/mod_calling", mode: 'copy'
     input:
         path epic
         path dss
@@ -68,7 +68,7 @@ process add_betas {
     memory '16 GB'
     time '2h'
     container params.r_methyl_container ?: "file://${projectDir}/containers/methylcibersort.sif"
-    publishDir "${params.out_dir}/${params.sample}/mod_calling", mode: 'copy'
+    publishDir "${params.sample_outdir}/mod_calling", mode: 'copy'
     input:
         path pre
     output:
@@ -85,7 +85,7 @@ process modification_calling {
     memory '16 GB'
     time '4h'
     container "file://${projectDir}/containers/general.sif"
-    publishDir "${params.out_dir}/${params.sample}/mod_calling", mode: 'copy'
+    publishDir "${params.sample_outdir}/mod_calling", mode: 'copy'
     input:
         path panel_meta
         path post_betas
@@ -109,7 +109,7 @@ process run_methylCS {
     memory '8 GB'
     time '1h'
     container params.r_methyl_container ?: "file://${projectDir}/containers/methylcibersort.sif"
-    publishDir "${params.out_dir}/${params.sample}/immune_infiltrate", mode: 'copy'
+    publishDir "${params.sample_outdir}/immune_infiltrate", mode: 'copy'
     
     input:
         path beta
@@ -133,7 +133,7 @@ process run_CIBERSORTX {
     time '2h'
     container "file://${projectDir}/containers/cibersortx_fractions.sif"
     containerOptions "--bind \${PWD}:/src/data --bind \${PWD}:/src/outdir"
-    publishDir "${params.out_dir}/${params.sample}/immune_infiltrate", mode: 'copy', saveAs: { f -> file(f).name }
+    publishDir "${params.sample_outdir}/immune_infiltrate", mode: 'copy', saveAs: { f -> file(f).name }
     input:
         path mixture
         path sigmatrix
@@ -163,7 +163,7 @@ process snv_prep {
     memory '4 GB'
     time '30m'
     container "file://${projectDir}/containers/general.sif"
-    publishDir "${params.out_dir}/${params.sample}/wf-humvar", mode: 'copy'
+    publishDir "${params.sample_outdir}/wf-humvar", mode: 'copy'
     input:
         path vcf_clin_raw
         path vcf_gz
@@ -186,7 +186,7 @@ process snv_annotation {
     memory '8 GB'
     time '2h'
     container "file://${projectDir}/containers/general.sif"
-    publishDir "${params.out_dir}/${params.sample}/snv_annotation", mode: 'copy'
+    publishDir "${params.sample_outdir}/snv_annotation", mode: 'copy'
     input:
         path panel_meta
         path vcf_clin
@@ -213,7 +213,7 @@ process sv_annotation {
     memory '8 GB'
     time '2h'
     container "file://${projectDir}/containers/general.sif"
-    publishDir "${params.out_dir}/${params.sample}/sv_annotation", mode: 'copy'
+    publishDir "${params.sample_outdir}/sv_annotation", mode: 'copy'
     input:
         path panel_meta
         path vcf_sv
@@ -235,7 +235,7 @@ process immune_infiltrate_mCS {
     memory '8 GB'
     time '1h'
     container "file://${projectDir}/containers/general.sif"
-    publishDir "${params.out_dir}/${params.sample}/immune_infiltrate", mode: 'copy'
+    publishDir "${params.sample_outdir}/immune_infiltrate", mode: 'copy'
     input:
         path panel_meta
         path mcs
@@ -334,7 +334,7 @@ workflow sample_processing {
         if (params.skip_cibersortx) {
             // Use a pre-existing results file from the output directory (e.g. when token is expired)
             cibersortx_out_ch = Channel.fromPath(
-                "${params.out_dir}/${params.sample}/immune_infiltrate/CIBERSORTx_${params.sample}_Results.csv",
+                "${params.sample_outdir}/immune_infiltrate/CIBERSORTx_${params.sample}_Results.csv",
                 checkIfExists: true
             )
         } else {

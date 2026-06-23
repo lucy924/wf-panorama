@@ -57,7 +57,7 @@ process get_immune_reference {
     memory '2 GB'
     time '15m'
     container params.r_methyl_container ?: "file://${projectDir}/containers/methylcibersort.sif"
-    publishDir "${params.out_dir}", mode: 'copy'
+    publishDir "${params.project_outdir}", mode: 'copy'
 
     input:
         val cancer_type
@@ -79,7 +79,7 @@ process make_panel_bed {
     time '1h'
     container "file://${projectDir}/containers/general.sif"
     // Only publish the all_targets BED (targets_for_align.bed); suppress biomarker_panel.bed
-    publishDir "${params.out_dir}/minknow_input", mode: 'copy',
+    publishDir "${params.project_outdir}/minknow_input", mode: 'copy',
         saveAs: { filename -> filename == "biomarker_panel.bed" ? null : filename }
 
     input:
@@ -87,19 +87,22 @@ process make_panel_bed {
         path immune_ref_file
         path epic_locs_file
         val  final_align_bed_name
+        val allEPIC
 
     output:
         path "biomarker_panel.bed",  emit: panel_bed
         path final_align_bed_name,   emit: all_targets
 
     script:
+    def allEpicFlag = allEPIC ? '--all-epic' : ''
     """
     python3 ${projectDir}/bin/make_panel_bed.py \
         --panel-csv ${panel_csv} \
         --immune-reference ${immune_ref_file} \
         --epic-locs ${epic_locs_file} \
         --panel-bed biomarker_panel.bed \
-        --all-targets ${final_align_bed_name}
+        --all-targets ${final_align_bed_name} \
+        ${allEpicFlag}
     """
 }
 
@@ -147,7 +150,7 @@ process check_coverage {
     debug true
     container "file://${projectDir}/containers/general.sif"
     // Only publish the final buffered targets BED (targets_buffed.bed)
-    publishDir "${params.out_dir}/minknow_input", mode: 'copy'
+    publishDir "${params.project_outdir}/minknow_input", mode: 'copy'
 
     input:
         path minknow_bed_file
@@ -205,6 +208,8 @@ workflow panel_prep {
                                 ? file("${projectDir}/resources/${params.Illumina_epic_locs}") 
                                 : file("${projectDir}/resources/IlluminaEPIC_genomic_locations_hg38.csv")
 
+        def allEPIC = params.all_epic_probes in [true, 'true', 'True', 1, '1']
+
         ref_ch          = Channel.fromPath(ref_fasta.toString(), checkIfExists: true)
         ref_idx_ch      = Channel.fromPath(ref_fai.toString(), checkIfExists: true)
         chrom_sizes_ch  = Channel.fromPath(chrom_sizes_path.toString(), checkIfExists: true)
@@ -225,7 +230,8 @@ workflow panel_prep {
             panel_metadata_ch, 
             get_immune_reference.out.immune_ref, 
             epic_locs_ch, 
-            final_align_bed_name
+            final_align_bed_name,
+            allEPIC
         )
 
         // 3. Generate MinKNOW adaptive-sampling reference files
