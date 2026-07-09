@@ -50,6 +50,14 @@ def get_BM_TYPE_FULL(path2panel):
 def get_VARIANT_TYPES(BM_TYPE_FULL):
     return BM_TYPE_FULL.split('(')[1].split(')')[0].split(', ')
 
+def get_full_SCORING_TYPE(path2panel):
+    """
+    Ensures we always get the updated list that is provided to the user
+    """
+    with open(path2panel, "r") as f:
+        header = f.readline()
+    return header.split('"')[3]  # should be the Scoring Type header
+
 # BIOMARKER_TYPE_FULL = "Biomarker Type (snv, sv, mod, area_mutations, expression, exp_ratio, immune_ratio, immune_inf, microsatellite, demographic, clinicopathology)"
 # VARIANT_TYPE = "Biomarker Type (snv, sv, mod, area_mutations, expression, exp_ratio, immune_ratio, immune_inf, microsatellite, demographic, clinicopathology)" 
 

@@ -109,7 +109,12 @@ process RUN_WF_HUMVAR {
     # Output dir for this task (relative, inside task workDir — captured by Nextflow)
     mkdir -p wf-humvar
 
-    # ont_basecaller flag is resolved by Nextflow (see def above script block)
+    # add in override basecaller flag if params is a string
+    if [[ -n "${params.ont_basecaller}" && "${params.ont_basecaller}" != "null" ]]; then
+        add_ont_basecaller="--override_basecaller_cfg \"${params.ont_basecaller}\""
+    else
+        add_ont_basecaller=""
+    fi
 
     echo "Running wf-human-variation for sample ${sample_name} with BAM dir ${bam_dir}"
 
@@ -127,7 +132,7 @@ process RUN_WF_HUMVAR {
         --output_gene_summary \
         --output_xam_fmt bam \
         --modkit_args "--preset traditional" \
-        --bam_min_coverage ${params.wf_humvar_bam_min_coverage} ${add_ont_basecaller} \
+        --bam_min_coverage ${params.wf_humvar_bam_min_coverage} \$add_ont_basecaller \
         -profile ${params.wf_humvar_profile} \
         -process.executor slurm \
         -w \$NXF_WORK \

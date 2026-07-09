@@ -82,7 +82,9 @@ merged_df = pd.merge(variants_metadata_df_snps, info_df, on='ID', how='left')
 merged_df.to_csv(snv_output, index=False)
 
 bm_classif_panel_df = pd.DataFrame(columns=preclin_stage_panel_result_header)
-only_genotypes = merged_df[merged_df['Genotype'] != '']
-for i, row in only_genotypes.iterrows():
-    bm_classif_panel_df.loc[i] = [row[BIOMARKER_ID], row[BIOMARKER_NAME], row[SCORING_TYPE], row[BIOMARKER_TYPE_FULL], row[RESULT_OPTIONS], row['Genotype']]
+if len(merged_df) != 0:
+    only_genotypes = merged_df[merged_df['Genotype'] != '']
+    for i, row in only_genotypes.iterrows():
+        bm_classif_panel_df.loc[i] = [row[BIOMARKER_ID], row[BIOMARKER_NAME], row[SCORING_TYPE], row[BIOMARKER_TYPE_FULL], row[RESULT_OPTIONS], row['Genotype']]
+
 bm_classif_panel_df.to_csv(snv_preclin_output, index=False)

@@ -190,11 +190,11 @@ process snv_annotation {
     container "file://${projectDir}/containers/general.sif"
     publishDir "${params.sample_outdir}/snv_annotation", mode: 'copy'
     input:
-        path panel_meta
-        path vcf_clin
-        path vcf_clin_tbi
-        path vcf_all
-        path vcf_all_tbi
+        path panel_meta  // BRCA_panel.20260622.csv
+        path vcf_clin  // Sample1_BCA.wf_snp_clinvar.vcf.gz
+        path vcf_clin_tbi  // Sample1_BCA.wf_snp_clinvar.vcf.gz.tbi
+        path vcf_all  // Sample1_BCA.wf_snp.vcf.gz
+        path vcf_all_tbi  // Sample1_BCA.wf_snp.vcf.gz.tbi
     output:
         path "${params.sample}.raw_snv_results.csv", emit: snv_raw
         path "${params.sample}.snv_results.csv",     emit: snv_panel
@@ -219,6 +219,7 @@ process sv_annotation {
     input:
         path panel_meta
         path vcf_sv
+        path vcf_sv_tbi
     output:
         path "${params.sample}.raw_sv_results.csv", emit: sv_raw
         // path "${params.sample}.sv_results.csv",     emit: sv_panel  // TODO: Turned off for now until we get some SV data we can investigate
@@ -322,6 +323,12 @@ workflow sample_processing {
         vcf_clin_raw_ch = wf_humvar_files.map { files ->
             files.find { it.name =~ /\.wf_snp_clinvar\.vcf$/ }
         }
+        vcf_sv_ch = wf_humvar_files.map { files ->
+            files.find { it.name =~ /\.wf_sv\.vcf\.gz$/ }
+        }
+        vcf_sv_tbi_ch = wf_humvar_files.map { files ->
+            files.find { it.name =~ /\.wf_sv\.vcf\.gz\.tbi$/ }
+        }
 
         // 2. Methylation pipeline
         combine_bedmethyls(mods1_ch, mods2_ch, mods_ungrouped_ch)
@@ -354,7 +361,7 @@ workflow sample_processing {
         // 4. SNV / SV annotation
         snv_prep(vcf_clin_raw_ch, vcf_all_ch)
         snv_annotation(panel_metadata_ch, snv_prep.out.vcf_clin_gz, snv_prep.out.vcf_clin_tbi, vcf_all_ch, snv_prep.out.vcf_tbi)
-        sv_annotation(panel_metadata_ch, vcf_all_ch)
+        sv_annotation(panel_metadata_ch, vcf_sv_ch, vcf_sv_tbi_ch)
 
         // 5. Immune infiltrate
         immune_infiltrate_mCS(panel_metadata_ch, cibersortx_out_ch)
