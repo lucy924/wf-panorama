@@ -3,7 +3,7 @@ import argparse
 import sys
 import pandas as pd
 import numpy as np
-from shared_functions import variant_prep, BIOMARKER_ID, BIOMARKER_NAME, BIOMARKER_TYPE, get_BM_TYPE_FULL, SCORING_TYPE, RESULT_OPTIONS, preclin_stage_panel_result_header
+from shared_functions import variant_prep, BIOMARKER_ID, BIOMARKER_NAME, BIOMARKER_TYPE, get_BM_TYPE_FULL, get_full_SCORING_TYPE, SCORING_TYPE, RESULT_OPTIONS, preclin_stage_panel_result_header
 
 # CIBERSORTx headers for cell types
 lymphocytes = ["CD19", "CD4_Eff",
@@ -74,6 +74,7 @@ parser.add_argument('--panel', required=True)
 args = parser.parse_args()
 
 BIOMARKER_TYPE_FULL = get_BM_TYPE_FULL(path2panel=args.panel)
+SCORING_TYPE_FULL = get_full_SCORING_TYPE(path2panel=args.panel)
 
 # CIBERSORT output is tab separated, others might not be
 deconv_df = pd.read_csv(args.deconv, sep='\t')
@@ -111,7 +112,7 @@ for i, row in panel_data_ratio.iterrows():
         result = NLR_ratio
     else:
         result = np.nan
-    bm_classif_panel_df.loc[i] = [row[BIOMARKER_ID], row[BIOMARKER_NAME], row[SCORING_TYPE], row[BIOMARKER_TYPE_FULL], row[RESULT_OPTIONS], result]
+    bm_classif_panel_df.loc[i] = [row[BIOMARKER_ID], row[BIOMARKER_NAME], row[SCORING_TYPE_FULL], row[BIOMARKER_TYPE_FULL], row[RESULT_OPTIONS], result]
 
 mapping = {
     'Monocyte_inf': Monocytes,
@@ -130,6 +131,6 @@ mapping = {
 for i, row in panel_data_infiltrate.iterrows():
     name = row[BIOMARKER_NAME]
     result = mapping.get(name, np.nan)
-    bm_classif_panel_df.loc[i] = [row[BIOMARKER_ID], row[BIOMARKER_NAME], row[SCORING_TYPE], row[BIOMARKER_TYPE_FULL], row[RESULT_OPTIONS], result]
+    bm_classif_panel_df.loc[i] = [row[BIOMARKER_ID], row[BIOMARKER_NAME], row[SCORING_TYPE_FULL], row[BIOMARKER_TYPE_FULL], row[RESULT_OPTIONS], result]
 
 bm_classif_panel_df.to_csv(args.out, index=False)

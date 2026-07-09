@@ -288,6 +288,7 @@ There are three modes of operation, selected by the following flags:
 | make_target_bed | boolean | Generate a target bed file for MinKNOW adaptive sampling. | Uses the biomarker panel metadata to produce buffered target regions. | False |
 | clin_trial_mode | boolean | Run sample processing for clinical trial mode. | Processes a single patient sample and outputs data suitable for classifier training. | False |
 | clinical_mode | boolean | Generate an individual patient sample report using a trained classifier. | Requires a completed clinical trial and classifier results in the panel metadata. | False |
+| base_working_dir | string | Base working directory for the workflow. | This is where all output will be stored. | `~/wf-panorama_run` |
 | project_name | string | A project name that will be used for containing all the samples processed during the clinical trial. If using in clinical mode, this will be used for containing all samples processed using the same classifier. | This structure is necessary in order for the biomarker metadata to be processed appropriately. | (Required input for all modes) |
 | panel_metadata | string | The path to `<panel_metadata>.csv` | See section [Biomarker panel input](#-biomarker-panel-input) for details | (Required input for all modes) |
 | mCS_cancer_type | string | The cancer/tissue type of the project. | Required. See [Tissue type options](#tissue-type-options). | `bladder` |  
@@ -361,6 +362,7 @@ Please note that the MethylCIBERSORT reference data it uses to build the bed fil
 ```sh
 nextflow run Genomic-and-Epigenomic-Research-Lab-NZ/wf-panorama \
     --make_target_bed \
+    --base_working_dir ~/wf-panorama_run \
     --project_name Project_Name \
     --panel_metadata /path/to/demo_input/panel_metadata.csv \
     --mCS_cancer_type bladder \
@@ -399,6 +401,7 @@ Expected runtime: < 5 min
 ```sh
 nextflow run Genomic-and-Epigenomic-Research-Lab-NZ/wf-panorama \
     --clin_trial_mode \
+    --base_working_dir ~/wf-panorama_run \
     --project_name Project_Name \
     --sample Test1 \
     --bam_directory /path/to/bam_pass/ \
@@ -431,6 +434,7 @@ nextflow run Genomic-and-Epigenomic-Research-Lab-NZ/wf-panorama \
 ```sh
 nextflow run Genomic-and-Epigenomic-Research-Lab-NZ/wf-panorama \
     --clinical_mode \
+    --base_working_dir ~/wf-panorama_run \
     --project_name Project_Name \
     --report_title "BCG on NMIBC – Patient Report" \
     --sample Test1 \
