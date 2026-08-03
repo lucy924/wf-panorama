@@ -531,6 +531,12 @@ An example of the csv can be found here: [demo_input/panel_metadata.csv](demo_in
 > - ID numbers in the 500's are reserved for additional non-molecular factors such as demographic or clinicopathologic indicators that you wish to include in the classifiers but cannot be measured by nanopore sequencing
 > - The biomarker types "immune_inf" must not be changed  
 
+> [!TIP]
+>
+> A great gene list to bed file converter is called BED-Craft and can be found here: 
+> https://keio-cmg.jp/BED-Craft/index.php
+> This can be used to get coordinates to input into the excel metadata file. Please ensure the buffer size is set to 0, as `make_target_bed` will add the appropriate upstream and downstream regions BEFORE the buffer is added.
+
 <!-- TODO: Add references to the clinical report -->
 
 | Parameter name                      | Type    | Required? | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
@@ -629,6 +635,8 @@ Many thanks go to the funders of this project, The Barbara Basham Medical Charit
   - Newman, A.M., Liu, C.L., Green, M.R., Gentles, A.J., Feng, W., Xu, Y., Hoang, C.D., Diehn, M., Alizadeh, A.A., 2015. Robust enumeration of cell subsets from tissue expression profiles. Nat Methods 12, 453–457. <https://doi.org/10.1038/nmeth.3337>
 - MethylCIBERSORT
   - Chakravarthy, A., Furness, A., Joshi, K., Ghorani, E., Ford, K., Ward, M.J., King, E.V., Lechner, M., Marafioti, T., Quezada, S.A., Thomas, G.J., Feber, A., Fenton, T.R., 2018. Pan-cancer deconvolution of tumour composition using DNA methylation. Nat Commun 9, 3220. <https://doi.org/10.1038/s41467-018-05570-1>
+- BED-Craft
+  - Miya, F., Kosaki, K. BED-Craft for nanopore adaptive sampling: a tool for generating bed files with gene names as input data for enrichment sequencing. BMC Res Notes 18, 79 (2025). https://doi.org/10.1186/s13104-025-07152-z
 <!-- Citation style: Elsevier (author-date/Harvard, with titles) -->
 - Adaptive sampling reference file modified from:
   - Stephane Plaisance (VIB-NC) 2021

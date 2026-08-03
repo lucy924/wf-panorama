@@ -86,6 +86,7 @@ process make_panel_bed {
         path panel_csv
         path immune_ref_file
         path epic_locs_file
+        path msk_impact_file
         val  final_align_bed_name
         val allEPIC
 
@@ -95,6 +96,7 @@ process make_panel_bed {
 
     script:
     def allEpicFlag = allEPIC ? '--all-epic' : ''
+    def mskImpactFlag = msk_impact_file.name != 'NO_MSK_FILE' ? "--msk_impact ${msk_impact_file}" : ''
     """
     python3 ${projectDir}/bin/make_panel_bed.py \
         --panel-csv ${panel_csv} \
@@ -102,7 +104,8 @@ process make_panel_bed {
         --epic-locs ${epic_locs_file} \
         --panel-bed biomarker_panel.bed \
         --all-targets ${final_align_bed_name} \
-        ${allEpicFlag}
+        ${allEpicFlag} \
+        ${mskImpactFlag}
     """
 }
 
@@ -207,13 +210,20 @@ workflow panel_prep {
         def epic_locs = params.Illumina_epic_locs 
                                 ? file("${projectDir}/resources/${params.Illumina_epic_locs}") 
                                 : file("${projectDir}/resources/IlluminaEPIC_genomic_locations_hg38.csv")
+        
+        def msk_impact_panel = params.msk_impact_panel 
+                                ? file("${projectDir}/resources/msk-impact_panel.20260730.bed") 
+                                : null
 
-        def allEPIC = params.all_epic_probes in [true, 'true', 'True', 1, '1']
+        def allEPIC = params.all_epic_probes in [true, 'true', 'True', 1, '1']   // Get all possible true values for boolean parameter
 
         ref_ch          = Channel.fromPath(ref_fasta.toString(), checkIfExists: true)
         ref_idx_ch      = Channel.fromPath(ref_fai.toString(), checkIfExists: true)
         chrom_sizes_ch  = Channel.fromPath(chrom_sizes_path.toString(), checkIfExists: true)
         epic_locs_ch    = Channel.fromPath(epic_locs.toString(), checkIfExists: true)
+        msk_impact_ch    = params.msk_impact_panel 
+                            ? Channel.fromPath(msk_impact_panel.toString(), checkIfExists: true)
+                            : Channel.of(file("NO_MSK_FILE"))
         // immune_ref_ch = Channel.of(immune_ref)
 
         // 1. Index the reference
@@ -230,6 +240,7 @@ workflow panel_prep {
             panel_metadata_ch, 
             get_immune_reference.out.immune_ref, 
             epic_locs_ch, 
+            msk_impact_ch,
             final_align_bed_name,
             allEPIC
         )

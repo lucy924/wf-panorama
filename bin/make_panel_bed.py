@@ -44,6 +44,21 @@ def parse_panel(panel_csv_fp):
     return panel_csv
 
 
+def add_msk_impact(panel_csv, msk_impact):
+    """msk_impact is a bed file"""
+    
+    msk_panel = pd.read_csv(msk_impact, sep="\t", header=None, names=["chrom", "start pos", "end pos", "ID", "score", "strand"])
+    msk_panel["Is this record the whole gene?"] = "Yes"
+    msk_panel["length"] = msk_panel["end pos"] - msk_panel["start pos"]
+    
+    # add the msk panel to the existing panel_csv
+    # note that need to match the columns to the order in panel_csv, they are in different order in msk_panel
+    msk_panel = msk_panel[["ID", "chrom", "start pos", "end pos", "strand", "Is this record the whole gene?", "length"]]
+    panel_csv = pd.concat([panel_csv, msk_panel], ignore_index=True)
+    
+    return panel_csv
+
+
 def add_functional_flanking_regions(panel_csv):
     promoter_length = 2000
     end_length = 1000
@@ -105,6 +120,8 @@ def restructure_to_bed(df, panel = False):
 def add_immune_infiltrate_locations(input_bed, immune_reference_dataset, epic_locs_hg38, allEPIC):
     
     EPIC_probes_loc_hg38 = pd.read_csv(epic_locs_hg38, index_col=0)
+    # header = "probe","seqnames","start","end","width","strand"
+    # row = "cg18478105","chr20",63216298,63216298,1,"-"
     
     if allEPIC:
         probes_bed_df = EPIC_probes_loc_hg38.rename(
@@ -112,7 +129,8 @@ def add_immune_infiltrate_locations(input_bed, immune_reference_dataset, epic_lo
                 'probe': 'name',
                 'seqnames': '#chrom',
                 'start': 'chromStart',
-                'end': 'chromEnd'
+                'end': 'chromEnd',
+                'width': 'length'
                 }
             )
     else:
@@ -135,12 +153,18 @@ def add_immune_infiltrate_locations(input_bed, immune_reference_dataset, epic_lo
                 'probe': 'name',
                 'seqnames': '#chrom',
                 'start': 'chromStart',
-                'end': 'chromEnd'
+                'end': 'chromEnd',
+                'width': 'length'
                 }
             )
         
         probes_bed_df = restructure_to_bed(probes_bed_df)        
-        merged_df = pd.concat([input_bed, probes_bed_df])
+    
+    merged_df = pd.concat([input_bed, probes_bed_df])
+    
+    # delete length column
+    if 'length' in merged_df.columns:
+        merged_df = merged_df.drop(columns=['length'])
         
     return merged_df
 
@@ -148,6 +172,9 @@ def add_immune_infiltrate_locations(input_bed, immune_reference_dataset, epic_lo
 def main(args):
     
     panel_csv = parse_panel(args.panel_csv)
+    
+    if args.msk_impact:
+        panel_csv = add_msk_impact(panel_csv, args.msk_impact)
 
     panel_csv = add_functional_flanking_regions(panel_csv)
     
@@ -167,7 +194,8 @@ if __name__ == '__main__':
     parser.add_argument('--epic-locs', required=True)
     parser.add_argument('--panel-bed', required=True)
     parser.add_argument('--all-targets', required=True)
-    parser.add_argument('--all-epic', '--allEPIC', dest='allEPIC', action='store_true', help='If set, will add all EPIC probes to the all targets bed file instead of just the immune infiltrate reference probes. WARNING: This will make the targets file cover ~20% of the genome')
+    parser.add_argument('--all-epic', '--allEPIC', dest='allEPIC', action='store_true', help='If set, will add all EPIC probes to the all targets bed file instead of just the immune infiltrate reference probes. WARNING: This will make the targets file cover ~20% of the genome when using a buffersize of 10kb')
+    parser.add_argument('--msk_impact', help='If given, will add the msk_impact panel to the panel bed file. WARNING: This will make the panel bed file cover ~70% of the genome when using a buffersize of 10kb')
     args = parser.parse_args()
 
     main(args)
