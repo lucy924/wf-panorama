@@ -222,13 +222,14 @@ process sv_annotation {
         path vcf_sv_tbi
     output:
         path "${params.sample}.raw_sv_results.csv", emit: sv_raw
-        // path "${params.sample}.sv_results.csv",     emit: sv_panel  // TODO: Turned off for now until we get some SV data we can investigate
+        path "${params.sample}.sv_results.csv",     emit: sv_panel 
     script:
         """
         python3 ${projectDir}/bin/sv_annotation.py \
             --panel ${panel_meta} \
             --vcf_sv ${vcf_sv} \
-            --out ${params.sample}.raw_sv_results.csv
+            --out_raw ${params.sample}.raw_sv_results.csv \
+            --out_panel ${params.sample}.sv_results.csv
         """
 }
 
@@ -368,8 +369,8 @@ workflow sample_processing {
 
     emit:
         snv_panel    = snv_annotation.out.snv_panel
-        // sv_panel     = sv_annotation.out.sv_panel  # TODO: Turned off for now until we get some SV data we can investigate
         sv_panel     = sv_annotation.out.sv_raw
+        sv_panel     = sv_annotation.out.sv_panel
         mod_results  = modification_calling.out.mod_results
         immune       = immune_infiltrate_mCS.out.immune
 }

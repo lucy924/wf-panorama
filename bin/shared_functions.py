@@ -63,7 +63,7 @@ def get_full_SCORING_TYPE(path2panel):
 
 # BIOMARKER_TYPE_FULL is no longer set at module level.
 # Each script that needs it should call: BIOMARKER_TYPE_FULL = get_BM_TYPE_FULL(path2panel=args.panel)
-# VARIANT_TYPE = get_BM_TYPE_FULL()  # TODO: run without this enabled to make sure it doesn't break anything.
+# VARIANT_TYPE should no longer be used, and BIOMARKER_TYPE_FULL should be used instead
 
 BIOMARKER_ID = "ID"
 BIOMARKER_NAME = "Biomarker name"
@@ -123,7 +123,7 @@ def get_annotation_info_dict(info_field):
     return info_dict
 
 
-def add_result(add_data_to_this_dict, variant, annotation_dict, log, clinvar=False):
+def add_result(add_data_to_this_dict, variant, annotation_dict, log, clinvar=False, note_text=None):
     from warnings import warn
     if not variant.FILTERS[0] == 'PASS':
         log.write(f"  WARNING: This variant did not pass filters. Variant position: {variant.CHROM}:{variant.start}-{variant.end}\n")
@@ -155,6 +155,26 @@ def add_result(add_data_to_this_dict, variant, annotation_dict, log, clinvar=Fal
         sv_type = variant.INFO.get('SVTYPE')
     except:
         sv_type = 'N/A'
+    
+    try:
+        location = f"{variant.CHROM}:{variant.POS}-{variant.end}"
+    except:
+        location = 'N/A'
+        
+    if sv_type != 'N/A':
+        try:
+            allele = annotation_dict.get('Allele', 'N/A')
+        except:
+            allele = 'N/A'
+        try:
+            annotation_impact = annotation_dict.get('Annotation_Impact', 'N/A')
+        except:
+            annotation_impact = 'N/A'
+    else:
+        allele = 'N/A'
+        annotation_impact = 'N/A'
+        
+    
     annotation_HGVSc = annotation_dict.get('HGVS.c', '')
     annotation_HGVSp = annotation_dict.get('HGVS.p', '')
     add_data_to_this_dict['Significance (ClinVar)'] = significance
@@ -165,4 +185,69 @@ def add_result(add_data_to_this_dict, variant, annotation_dict, log, clinvar=Fal
     add_data_to_this_dict['HGVS.p'] = annotation_HGVSp
     add_data_to_this_dict['SV Length'] = sv_length
     add_data_to_this_dict['SV Type'] = sv_type
+    add_data_to_this_dict['Allele'] = sv_type
+    add_data_to_this_dict['Annotation Impact'] = annotation_impact
+    add_data_to_this_dict['Location'] = location
+    add_data_to_this_dict['Notes'] = note_text if note_text is not None else ''
+    
     return add_data_to_this_dict
+
+
+def get_snv_by_genomic_location(
+    variants_metadata_df_sub,
+    variant,
+    info_dict,
+    annotation_dict,
+    row_data,
+    entry_found,
+    log,
+    location=list(),
+    end_only=False,
+    start_only=False,
+    clinvar=False
+):
+    """
+    Match SNV by genomic location using:
+    - exact chrom/start/end
+    - end-only fallback
+    - start-only fallback (indel-like)
+    """
+    chrom, start, end = location
+
+    chrom_col = variants_metadata_df_sub['chrom'].astype(str)
+    start_col = variants_metadata_df_sub['start pos'].astype(str).str.replace(',', '', regex=False)
+    end_col = variants_metadata_df_sub['end pos'].astype(str).str.replace(',', '', regex=False)
+
+    if end_only:
+        filterdata_loc = variants_metadata_df_sub.loc[
+            (chrom_col == str(chrom)) & (end_col == str(end))
+        ]
+    elif start_only:
+        filterdata_loc = variants_metadata_df_sub.loc[
+            (chrom_col == str(chrom)) & (start_col == str(start))
+        ]
+    else:
+        filterdata_loc = variants_metadata_df_sub.loc[
+            (chrom_col == str(chrom)) & (start_col == str(start)) & (end_col == str(end))
+        ]
+
+    if len(filterdata_loc) == 1:
+        if end_only:
+            log.write("  entry found by end-only genomic location\n")
+        elif start_only:
+            log.write("  entry found by start-only genomic location (possible indel)\n")
+        else:
+            log.write("  entry found by exact genomic location\n")
+        row_data = add_result(
+            add_data_to_this_dict=row_data,
+            variant=variant,
+            annotation_dict=annotation_dict,
+            log=log,
+            clinvar=clinvar
+        )
+        entry_found = True
+    elif len(filterdata_loc) > 1:
+        log.write(f"  ERROR: ambiguous genomic match at {chrom}:{start}-{end} ({len(filterdata_loc)} rows)\n")
+        raise ValueError(f"Ambiguous genomic match at {chrom}:{start}-{end}")
+
+    return row_data, entry_found
