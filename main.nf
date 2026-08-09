@@ -147,6 +147,7 @@ workflow {
         if (!params.bam_directory)       error "Please provide --bam_directory <path_to_bam_folder> when using --${mode}"
         if (!params.cibersortx_username) error "Please provide --cibersortx_username <username> when using --${mode}"
         if (!params.cibersortx_token)    error "Please provide --cibersortx_token <token> when using --${mode}"
+        if (!params._base_working_dir_user_set) error "Please provide --base_working_dir <path> when using --${mode}. This must point to the same base directory used during --make_target_bed so that shared project files (target bed, panel files) can be located."
     }
 
     if (params.make_target_bed) {
