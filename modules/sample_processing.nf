@@ -97,9 +97,9 @@ process modification_calling {
         """
         python3 ${projectDir}/bin/modification_calling.py \
             --panel ${panel_meta} --mod_data ${post_betas} \
-            --out-meth ${params.sample}.methatlas.csv \
-            --out-mod  ${params.sample}.mod_results.csv \
-            --out-raw  ${params.sample}.rawmod_results.csv
+            --out_meth ${params.sample}.methatlas.csv \
+            --out_mod  ${params.sample}.mod_results.csv \
+            --out_raw  ${params.sample}.rawmod_results.csv
         """
 }
 
@@ -166,6 +166,7 @@ process snv_prep {
     errorStrategy { task.attempt <= 2 ? 'retry' : 'finish' }
     container "file://${projectDir}/containers/general.sif"
     publishDir "${params.sample_outdir}/wf-humvar", mode: 'copy'
+    //TODO: Move/copy the vcf raw output to wf-humvar like the other outputs from this process. Ensure it doesn't break "snv_annotation"
     input:
         path vcf_clin_raw
         path vcf_gz
@@ -221,8 +222,9 @@ process sv_annotation {
         path vcf_sv
         path vcf_sv_tbi
     output:
-        path "${params.sample}.raw_sv_results.csv", emit: sv_raw
-        path "${params.sample}.sv_results.csv",     emit: sv_panel 
+        path "${params.sample}.raw_sv_results.csv",     emit: sv_raw
+        path "${params.sample}.raw_sv_results.csv.log", emit: sv_log
+        path "${params.sample}.sv_results.csv",         emit: sv_panel 
     script:
         """
         python3 ${projectDir}/bin/sv_annotation.py \
@@ -368,8 +370,9 @@ workflow sample_processing {
         immune_infiltrate_mCS(panel_metadata_ch, cibersortx_out_ch)
 
     emit:
+        snv_raw      = snv_annotation.out.snv_raw
         snv_panel    = snv_annotation.out.snv_panel
-        sv_panel     = sv_annotation.out.sv_raw
+        sv_raw       = sv_annotation.out.sv_raw
         sv_panel     = sv_annotation.out.sv_panel
         mod_results  = modification_calling.out.mod_results
         immune       = immune_infiltrate_mCS.out.immune

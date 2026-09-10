@@ -44,8 +44,11 @@ def get_BM_TYPE_FULL(path2panel):
     Ensures we always get the updated list that is provided to the user
     """
     with open(path2panel, "r") as f:
-        header = f.readline()
-    return header.split('"')[1]
+        header = f.readline().strip('\ufeff').strip('\n')
+    header_split = header.split('"')
+    for h in header_split:
+        if h.startswith('Biomarker Type'):  # Biomarker Type header
+            return h
 
 def get_VARIANT_TYPES(BM_TYPE_FULL):
     return BM_TYPE_FULL.split('(')[1].split(')')[0].split(', ')
@@ -55,8 +58,11 @@ def get_full_SCORING_TYPE(path2panel):
     Ensures we always get the updated list that is provided to the user
     """
     with open(path2panel, "r") as f:
-        header = f.readline()
-    return header.split('"')[3]  # should be the Scoring Type header
+        header = f.readline().strip('\ufeff').strip('\n')
+    header_split = header.split('"')
+    for h in header_split:
+        if h.startswith('Scoring'):  # Scoring Type header
+            return h
 
 # BIOMARKER_TYPE_FULL = "Biomarker Type (snv, sv, mod, area_mutations, expression, exp_ratio, immune_ratio, immune_inf, microsatellite, demographic, clinicopathology)"
 # VARIANT_TYPE = "Biomarker Type (snv, sv, mod, area_mutations, expression, exp_ratio, immune_ratio, immune_inf, microsatellite, demographic, clinicopathology)" 
@@ -71,9 +77,10 @@ BIOMARKER_TYPE = "Biomarker Type"
 SCORING_TYPE = "Scoring Type"
 RESULT_OPTIONS = "Result Options"
 RESULT = "Result"
+NOTES = "Notes"
 
 
-preclin_stage_panel_result_header = [BIOMARKER_ID, BIOMARKER_NAME, SCORING_TYPE, BIOMARKER_TYPE, RESULT_OPTIONS, RESULT]
+preclin_stage_panel_result_header = [BIOMARKER_ID, BIOMARKER_NAME, SCORING_TYPE, BIOMARKER_TYPE, RESULT_OPTIONS, RESULT, NOTES]
 
 variant_dict_columns_to_add = ['ClinVar', 'Significance (ClinVar)', 'Consequence (Clinvar)', 'Reference Allele', 'Variant Allele', 'Genotype', 'HGVS.c', 'HGVS.p', 'SV Length', 'SV Type']
 

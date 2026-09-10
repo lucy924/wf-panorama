@@ -8,6 +8,7 @@ process make_classifier_input {
     input:
         path panel_meta
         path snv_res
+        path sv_res
         path mod_res
         path immune_res
     output:
@@ -17,6 +18,7 @@ process make_classifier_input {
         python3 ${projectDir}/bin/collate_results_for_BM_classifier.py \
             --panel ${panel_meta} \
             --snv ${snv_res} \
+            --sv ${sv_res} \
             --mod ${mod_res} \
             --immune ${immune_res} \
             --out ${params.sample}.panel_results.csv

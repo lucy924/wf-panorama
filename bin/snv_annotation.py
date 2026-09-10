@@ -6,7 +6,7 @@ from shared_functions import (
     variant_prep, get_location_string, get_annotation_dict, get_annotation_info_dict,
     add_result, get_snv_by_genomic_location, variant_dict_columns_to_add,
     preclin_stage_panel_result_header, BIOMARKER_ID, BIOMARKER_NAME, SCORING_TYPE,
-    get_BM_TYPE_FULL, get_full_SCORING_TYPE, RESULT_OPTIONS, RESULT
+    get_BM_TYPE_FULL, get_full_SCORING_TYPE, RESULT_OPTIONS, RESULT, NOTES
 )
 
 
@@ -143,7 +143,7 @@ def main(args):
     if len(merged_df) != 0:
         only_genotypes = merged_df[merged_df['Genotype'] != '']
         for i, row in only_genotypes.iterrows():
-            bm_classif_panel_df.loc[i] = [row[BIOMARKER_ID], row[BIOMARKER_NAME], row[SCORING_TYPE_FULL], row[BIOMARKER_TYPE_FULL], row[RESULT_OPTIONS], row['Genotype']]
+            bm_classif_panel_df.loc[i] = [row[BIOMARKER_ID], row[BIOMARKER_NAME], row[SCORING_TYPE_FULL], row[BIOMARKER_TYPE_FULL], row[RESULT_OPTIONS], row['Genotype'], row[NOTES]]
 
     bm_classif_panel_df.to_csv(snv_preclin_output, index=False)
 

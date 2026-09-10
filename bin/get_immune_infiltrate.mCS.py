@@ -3,7 +3,7 @@ import argparse
 import sys
 import pandas as pd
 import numpy as np
-from shared_functions import variant_prep, BIOMARKER_ID, BIOMARKER_NAME, BIOMARKER_TYPE, get_BM_TYPE_FULL, get_full_SCORING_TYPE, SCORING_TYPE, RESULT_OPTIONS, preclin_stage_panel_result_header
+from shared_functions import variant_prep, BIOMARKER_ID, BIOMARKER_NAME, BIOMARKER_TYPE, get_BM_TYPE_FULL, get_full_SCORING_TYPE, SCORING_TYPE, RESULT_OPTIONS, NOTES, preclin_stage_panel_result_header
 
 # CIBERSORTx headers for cell types
 lymphocytes = ["CD19", "CD4_Eff",
@@ -112,7 +112,7 @@ for i, row in panel_data_ratio.iterrows():
         result = NLR_ratio
     else:
         result = np.nan
-    bm_classif_panel_df.loc[i] = [row[BIOMARKER_ID], row[BIOMARKER_NAME], row[SCORING_TYPE_FULL], row[BIOMARKER_TYPE_FULL], row[RESULT_OPTIONS], result]
+    bm_classif_panel_df.loc[i] = [row[BIOMARKER_ID], row[BIOMARKER_NAME], row[SCORING_TYPE_FULL], row[BIOMARKER_TYPE_FULL], row[RESULT_OPTIONS], result, row[NOTES]]
 
 mapping = {
     'Monocyte_inf': Monocytes,

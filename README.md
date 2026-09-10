@@ -9,7 +9,7 @@
 - [Panorama](#panorama)
   - [👇 Contents](#-contents)
   - [🧬 Introduction](#-introduction)
-    - [Stage One: In a Pre-Clinical Trial for a defined disease and single\* treatment option 📋](#stage-one-in-a-pre-clinical-trial-for-a-defined-disease-and-single-treatment-option-)
+    - [Stage One: In a Pre-Clinical Trial for a defined disease and classification development 📋](#stage-one-in-a-pre-clinical-trial-for-a-defined-disease-and-classification-development-)
     - [Stage Two: Patient sample reporting following a successful clinical trial 💊](#stage-two-patient-sample-reporting-following-a-successful-clinical-trial-)
   - [🖥️ Compute requirements](#️-compute-requirements)
   - [🥳 Third-party requirements](#-third-party-requirements)
@@ -35,6 +35,7 @@
       - [Output directory `<sample name>/wf-humvar-run`](#output-directory-sample-namewf-humvar-run)
       - [Output directory `<sample name>/mod_calling`](#output-directory-sample-namemod_calling)
       - [Output directory `<sample name>/snv_annotation`](#output-directory-sample-namesnv_annotation)
+      - [Output directory `<sample name>/sv_annotation`](#output-directory-sample-namesv_annotation)
       - [Output directory `<sample name>/immune_infiltrate`](#output-directory-sample-nameimmune_infiltrate)
   - [🎯 Biomarker panel input](#-biomarker-panel-input)
   - [✍️ Authors](#️-authors)
@@ -55,14 +56,12 @@ Panorama is built using the Nextflow workflow language and is intended to be use
 
 Panorama is intended for use as follows:  
 
-### Stage One: In a Pre-Clinical Trial for a defined disease and single* treatment option 📋
+### Stage One: In a Pre-Clinical Trial for a defined disease and classification development 📋
 
    1. Biomarkers are input via a csv file, as detailed in the section [Biomarker panel input](#-biomarker-panel-input) below. This will form the basis of the bed file used for adaptive sampling, and is also used for downstream pipeline processes. Biomarkers can include SNVs, methylation markers, and certain immune infiltrate markers as determined by immune deconvolution using methylation markers.
    2. Tumour samples are nanopore sequenced using adaptive sampling and a bed file containing the target regions required for biomarker analysis. This bed file is produced by this pipeline with the flag `--make_target_bed` and the biomarker csv file using the input parameter `--panel_metadata`. Resulting bam files are used as input to Panorama. Bam files must be basecalled using modified base calling (5mC+5hmC contexts), and aligned to the hg38 genome.
    3. Using the flag `--clin_trial_mode` the pipeline will output sample data as a csv file corresponding to the input biomarkers.
    4. Following patient sequence data collection, the researchers will carry out their own classifier development using the biomarker results identified by this pipeline. This is outside this tool's scope and presumably will involve some kind of machine learning. Results are added to the original biomarker input csv file and used as input for clinical reporting.
-
-**Multiple treatment options will be available in a future update*
 
 ### Stage Two: Patient sample reporting following a successful clinical trial 💊
 
@@ -101,7 +100,8 @@ Please get in contact with us if you are interested in using an alternative immu
 
 The workflow uses [Nextflow](https://www.nextflow.io/) to manage compute and software resources, therefore Nextflow will need to be installed before attempting to run the workflow.
 
-> [!WARNING] This workflow has been tested successfully using Nextflow v25.10.4. Panorama currently breaks on Nextflow v26.
+> [!WARNING]
+> This workflow has been tested successfully using Nextflow v25.10.4. Panorama currently breaks on Nextflow v26.
 
 The workflow can be run using [Singularity](https://docs.sylabs.io/guides/3.0/user-guide/index.html), [Apptainer](https://apptainer.org/) (the open-source fork of Singularity, common on newer HPC systems). Please note it has not been tested using [Docker](https://www.docker.com/).
 <!-- This is controlled by the
@@ -260,7 +260,6 @@ Profiles are selected with the `-profile` flag on the command line. Combine an *
 | *(none / standard)* | Docker |
 | `singularity` | Singularity (traditional HPC) |
 | `apptainer` | Apptainer (newer HPC systems, open-source Singularity fork) |
-| `conda` | Conda (limited support — not all processes are conda-compatible) |
 
 > [!TIP]
 > On HPC systems, use `--singularity_cache /path/to/shared/cache` to point to a shared container cache directory and avoid re-downloading containers for each user.
@@ -350,7 +349,7 @@ The MethylCIBERSORT process has a specific set of genomic locations it uses to g
 
 This mode has two outputs, for use in MinKNOW adaptive sampling. You must use this mode to generate your adaptive sampling bed file, as it combines your specific targets with regions identified for immune deconvolution by methylation. If your bed file does not contain these regions then the tool will not be able to perform immune deconvolution.  
 This mode may need to be rerun multiple times in order to create an optimal bed file that covers all regions adequately while also covering a suitable percentage of the genome. It will check if the resulting bed file meets all the requirements by using the `min_genome_coverage`, `max_genome_coverage` and `buffersize_bp` parameters. If the initial check fails, (it will tell you on the terminal) and/or you want different thresholds for these parameters, adjust them as desired and re-run until you get a successful message.  
-For single site targets such as SNPs, buffer regions for adaptive sampling will be added appropriately. For targets that are larger regions, such as an entire gene, this mode adds 2000bp upstream and 1000bp downstream as the adaptive sampling "target region" and THEN adds standard buffer regions on top of these surrounding regions.
+For single site targets such as SNPs, buffer regions for adaptive sampling will be added appropriately. For targets that are larger regions, such as an entire gene, this mode adds 2000bp upstream and 1000bp downstream as the adaptive sampling "target region" and THEN adds standard buffer regions on top of these surrounding regions.  
 Please note that the MethylCIBERSORT reference data it uses to build the bed file is based on hg38 genome coordinates.  
 
 #### Input
@@ -505,8 +504,9 @@ Along with nextflow-generated directories in `work/` (that can be removed when f
 - sample.raw_snv_results.csv
 - sample.snv_results.csv
 
-<!-- #### Output directory `<sample name>/sv_annotation`
-This module is not yet implemented, there is currently an empty placeholder output -->
+#### Output directory `<sample name>/sv_annotation`
+- sample.raw_sv_results.csv
+- sample.sv_results.csv
 
 <!-- #### Output directory `<sample name>/methylCS` -->
 
@@ -525,14 +525,12 @@ This can be generated using the template excel file provided in [demo_input](dem
 An example of the csv can be found here: [demo_input/panel_metadata.csv](demo_input/panel_metadata.csv)  
 
 > [!IMPORTANT]
->
 > - ID numbers in the 300's are reserved for molecular characterists comprised of multiple individual biomarkers/features, such as TNBC, HR+, subtypes, etc. These are not directly measured by sequencing but are calculated from multiple biomarker results.
 > - ID numbers in the 400's are reserved for immune parameters
 > - ID numbers in the 500's are reserved for additional non-molecular factors such as demographic or clinicopathologic indicators that you wish to include in the classifiers but cannot be measured by nanopore sequencing
 > - The biomarker types "immune_inf" must not be changed  
 
 > [!TIP]
->
 > A great gene list to bed file converter is called BED-Craft and can be found here: 
 > https://keio-cmg.jp/BED-Craft/index.php
 > This can be used to get coordinates to input into the excel metadata file. Please ensure the buffer size is set to 0, as `make_target_bed` will add the appropriate upstream and downstream regions BEFORE the buffer is added.
@@ -612,12 +610,19 @@ This protocol currently uses [epi2me-labs/wf-human-variation v2.6.0](https://git
 
 ## 🗺️ Roadmap
 
-- [ ]  Add multiple treatment options
 - [ ]  Allow running of multiple samples concurrently
 - [ ]  Integrate with Epi2ME Labs
 - [ ]  Add option for custom immune infiltrate references
+- [ ]  Improve fusion processing
+  - [ ]  Output merged bam produced during wf-human-variation to enable manual visualisation
 <!-- [ ] Add immune infiltrate barplot to outputs and clinical report -->
 <!-- [ ] update to more recent version of wf-human-variation -->
+
+<!-- Note:  
+Reasons not to use wf-somatic-variation
+- not a comparison to patient normal 
+- In tumour-only mode, SNV analysis is reliant on ClairS and needs to be tuned for each basecaller model, wf-human-variation is more up-to-date with available models -->
+
 
 ## 📜 Pipeline History
 

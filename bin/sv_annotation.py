@@ -6,7 +6,7 @@ from shared_functions import (
     variant_prep, get_location_string, get_annotation_dict, get_annotation_info_dict,
     get_snv_by_genomic_location, add_result, variant_dict_columns_to_add,
     preclin_stage_panel_result_header, BIOMARKER_ID, BIOMARKER_NAME, SCORING_TYPE,
-    get_BM_TYPE_FULL, get_full_SCORING_TYPE, RESULT_OPTIONS, RESULT
+    get_BM_TYPE_FULL, get_full_SCORING_TYPE, RESULT_OPTIONS, RESULT, NOTES
 )
 
 
@@ -34,6 +34,7 @@ def main(args):
             if target_ID in rows_found:
                 continue
             entry_found = False
+            log.write('================\n')
             log.write(f"looking for panel target {target_ID} in sv metadata\n")
 
             if target_ID not in info_to_add_to_metadata:
@@ -47,7 +48,7 @@ def main(args):
             for variant in vcf_sv(loc):
                 vars_in_loc.append(variant)
                 in_vcf = True
-                log.write('================\n')
+                log.write('------\n')
                 info_to_add_to_metadata[target_ID]['ClinVar'] = 'N/A'
 
                 if len(variant.genotypes) > 1:
@@ -82,7 +83,7 @@ def main(args):
                 rows_found.append(target_ID)
                 log.write(f"  target matched: {target_ID}\n\n")
             elif in_vcf:
-                log.write("area is in vcf but precise entry not found\n")
+                log.write("  area is in vcf but precise entry not found\n")
                 log.write(str(row.to_dict()) + "\n")
                 # TODO: Add variant info to results even if exact variant match was not found.
                 if len(vars_in_loc) > 1:
@@ -98,9 +99,10 @@ def main(args):
                     variant=variant,
                     annotation_dict=annotation_dict,
                     log=log,
-                    note_text="A variant in this approximate location was found but is not an exact match to the required biomarker. Available information is recorded here."
+                    note_text="A variant in this approximate location was found but is not an exact match to the required biomarker. Available information is recorded in the sv_annotation logfile."
                 )
                 result_string = f"Allele: {annotation_dict['Allele']} \nAnnotation: {annotation_dict['Annotation']} \nAnnotation Impact: {annotation_dict['Annotation_Impact']} \nHGVS.c: {annotation_dict['HGVS.c']} \nLength: {info_dict['SVLEN']} \nLocation: {chrom}:{variant.POS}-{variant.end}"
+                log.write("  " + result_string + "\n")
             else:
                 rows_not_found.append(target_ID)
                 log.write(f"  target not found: {target_ID}\n\n")
@@ -120,7 +122,7 @@ def main(args):
 
     if len(merged_df) != 0:
         for i, row in merged_df.iterrows():
-            bm_classif_panel_df.loc[i] = [row[BIOMARKER_ID], row[BIOMARKER_NAME], row[SCORING_TYPE_FULL], row[BIOMARKER_TYPE_FULL], row[RESULT_OPTIONS], row[RESULT]]
+            bm_classif_panel_df.loc[i] = [row[BIOMARKER_ID], row[BIOMARKER_NAME], row[SCORING_TYPE_FULL], row[BIOMARKER_TYPE_FULL], row[RESULT_OPTIONS], row[RESULT], row[NOTES]]
 
     bm_classif_panel_df.to_csv(sv_preclin_out, index=False)
 

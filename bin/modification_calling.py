@@ -3,19 +3,9 @@ import argparse
 import pandas as pd
 import os
 import numpy as np
-from shared_functions import preclin_stage_panel_result_header, variant_prep, CHROMOSOMES, SCORING_TYPE, RESULT_OPTIONS, BIOMARKER_NAME, get_BM_TYPE_FULL
+from shared_functions import preclin_stage_panel_result_header, variant_prep, CHROMOSOMES, SCORING_TYPE, RESULT_OPTIONS, BIOMARKER_NAME, NOTES, get_BM_TYPE_FULL, get_full_SCORING_TYPE
 
-# Note: this is a conversion of the original modification_calling.py adapted to CLI usage.
 
-parser = argparse.ArgumentParser()
-parser.add_argument('--panel', required=True)
-parser.add_argument('--mod_data', required=True)
-parser.add_argument('--out-meth', required=True)
-parser.add_argument('--out-mod', required=True)
-parser.add_argument('--out-raw', required=True)
-args = parser.parse_args()
-
-# Basic helper functions reproduced/adapted from original script
 
 def export_for_methatlas(df, fp):
     df = df[df['probe'].notna()]
@@ -89,7 +79,7 @@ def sort_and_prep_dfs(variants_df, dss_betas_df):
 
     # Sort by columns: 'chrom' (ascending), 'start pos' (ascending), 'end pos' (ascending)
     variants_df = variants_df.sort_values(["chrom", "prom_start", "prom_end"])
-    dss_betas_df = dss_betas_df.sort_values(["chr", "pos"])
+    dss_betas_df = dss_betas_df.sort_values(["chr", "pos"])  # TODO: computationally heavy - takes a long time
     return variants_df, dss_betas_df
 
 
@@ -225,10 +215,11 @@ def get_region_methylation(data):
     return result, meth, total
 
 
-def format_results_for_preclin_output(results_df):
+def format_results_for_preclin_output(results_df, all_mod_data):
     """Make preclin panel output"""
     
     BM_TYPE_FULL = get_BM_TYPE_FULL(path2panel=args.panel)
+    SCORING_TYPE_FULL = get_full_SCORING_TYPE(path2panel=args.panel)
     
     bm_classif_panel_df = pd.DataFrame(columns=preclin_stage_panel_result_header)
     panel_result_header_rawmod = preclin_stage_panel_result_header.copy()
@@ -269,14 +260,14 @@ def format_results_for_preclin_output(results_df):
             raise ValueError(f"code not ready for DNA methylation region = {panel_entry['DNA methylation region']} or variant type = {panel_entry[BM_TYPE_FULL]}")
         
         if panel_entry[BM_TYPE_FULL] != 'exp_ratio':
-            bm_classif_panel_df.loc[i] = [panel_id, panel_entry[BIOMARKER_NAME], panel_entry[SCORING_TYPE], biomarker_type, panel_entry[RESULT_OPTIONS], result] 
+            bm_classif_panel_df.loc[i] = [panel_id, panel_entry[BIOMARKER_NAME], panel_entry[SCORING_TYPE_FULL], biomarker_type, panel_entry[RESULT_OPTIONS], result] 
         
-        bm_classif_panel_rawmod_df.loc[i] = [panel_id, panel_entry[BIOMARKER_NAME], panel_entry[SCORING_TYPE], biomarker_type, panel_entry[RESULT_OPTIONS], result, meth, total] 
+        bm_classif_panel_rawmod_df.loc[i] = [panel_id, panel_entry[BIOMARKER_NAME], panel_entry[SCORING_TYPE_FULL], biomarker_type, panel_entry[RESULT_OPTIONS], result, meth, total] 
         
     return bm_classif_panel_df, bm_classif_panel_rawmod_df
 
 
-def add_exp_ratio_to_results(bm_classif_panel_df, bm_classif_panel_rawmod_df):
+def add_exp_ratio_to_results(bm_classif_panel_df, bm_classif_panel_rawmod_df, panel_data_exp_ratio):
     exp_ratio_panel_results = bm_classif_panel_rawmod_df[bm_classif_panel_rawmod_df['Biomarker Type'] == "exp_ratio"] 
     panel_input_exp_ratio_idxd = panel_data_exp_ratio.set_index('ID')
 
@@ -318,54 +309,63 @@ def add_exp_ratio_to_results(bm_classif_panel_df, bm_classif_panel_rawmod_df):
     return bm_classif_panel_df
 
 
-# Load inputs
-with open(args.mod_data, 'r') as fp:
-    dss_df = pd.read_csv(fp, sep=',', dtype={'probe': str, 'strand': str})
+def main(args):
+    # Load inputs
+    with open(args.mod_data, 'r') as fp:
+        dss_df = pd.read_csv(fp, sep=',', dtype={'probe': str, 'strand': str})
 
-# Export for methatlas
-export_for_methatlas(dss_df, args.out_meth)
+    # Export for methatlas
+    export_for_methatlas(dss_df, args.out_meth)
 
-# Load panel metadata
-panel_data_mod = variant_prep(args.panel, 'mod')
-panel_data_exp = variant_prep(args.panel, 'expression')
-panel_data_exp_ratio = variant_prep(args.panel, 'exp_ratio')
+    # Load panel metadata
+    panel_data_mod = variant_prep(args.panel, 'mod')
+    panel_data_exp = variant_prep(args.panel, 'expression')
+    panel_data_exp_ratio = variant_prep(args.panel, 'exp_ratio')
 
-all_mod_data = pd.concat([panel_data_mod, panel_data_exp, panel_data_exp_ratio])
+    all_mod_data = pd.concat([panel_data_mod, panel_data_exp, panel_data_exp_ratio])
 
-# Add flanking regions
-panel_meth_flank_df = add_prom_start_end(all_mod_data.copy())
-panel_meth_flank_df = add_downstream_start_end(panel_meth_flank_df.copy())
+    # Add flanking regions
+    panel_meth_flank_df = add_prom_start_end(all_mod_data.copy())
+    panel_meth_flank_df = add_downstream_start_end(panel_meth_flank_df.copy())
 
-# ------------------------------------------------ #
-# Compare methylation discovered at those coords to what is expected/useful (from metadata file)
-# meth_threshold = 0.8
-# `pos + 1` should map correctly to the methylated loci
+    # ------------------------------------------------ #
+    # Compare methylation discovered at those coords to what is expected/useful (from metadata file)
+    # meth_threshold = 0.8
+    # `pos + 1` should map correctly to the methylated loci
 
-panel_meth_flank_sorted_df, dss_df_sorted = (
-    sort_and_prep_dfs(
-        panel_meth_flank_df.copy(), dss_df.copy()
+    panel_meth_flank_sorted_df, dss_df_sorted = (
+        sort_and_prep_dfs(
+            panel_meth_flank_df.copy(), dss_df.copy()
+        )
     )
-)
 
-# ------------------------------------------------ #
-# Create a new dataframe containing all the cpgs in each desired location, getting all info from variants into each entry in results
-results_df = get_results_df(
-    dss_df_sorted, panel_meth_flank_sorted_df
-)
+    # ------------------------------------------------ #
+    # Create a new dataframe containing all the cpgs in each desired location, getting all info from variants into each entry in results
+    results_df = get_results_df(
+        dss_df_sorted, panel_meth_flank_sorted_df
+    )
 
-# ------------------------------------------------ #
-# Format for panel output
-# Additional table that has number of methylated positions in region calculations if needed
+    # ------------------------------------------------ #
+    # Format for panel output
+    # Additional table that has number of methylated positions in region calculations if needed
 
-bm_classif_panel_df, bm_classif_panel_rawmod_df = format_results_for_preclin_output(results_df)
+    bm_classif_panel_df, bm_classif_panel_rawmod_df = format_results_for_preclin_output(results_df, all_mod_data)
 
-# Add exp_ratio results to bm_classif_panel_df
-bm_classif_panel_df = add_exp_ratio_to_results(bm_classif_panel_df, bm_classif_panel_rawmod_df)
+    # Add exp_ratio results to bm_classif_panel_df
+    bm_classif_panel_df = add_exp_ratio_to_results(bm_classif_panel_df, bm_classif_panel_rawmod_df, panel_data_exp_ratio)
 
-# Minimal extraction of results: align dss positions to panel entries
-# This was complex in original; here provide an output structure with placeholder logic
-# results_df = pd.DataFrame(columns=["ID","Biomarker name","chrom","start pos","end pos","strand","probe","beta","CpG location","CpG region","N","X","prom_start","prom_end","down_start","down_end"])
+    # Create placeholder outputs
+    bm_classif_panel_rawmod_df.to_csv(args.out_raw, index=False)
+    bm_classif_panel_df.to_csv(args.out_mod, index=False)
 
-# Create placeholder outputs
-bm_classif_panel_rawmod_df.to_csv(args.out_raw, index=False)
-bm_classif_panel_df.to_csv(args.out_mod, index=False)
+if __name__ == "__main__":
+    
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--panel', required=True)
+    parser.add_argument('--mod_data', required=True)
+    parser.add_argument('--out_meth', required=True)
+    parser.add_argument('--out_mod', required=True)
+    parser.add_argument('--out_raw', required=True)
+    args = parser.parse_args()
+
+    main(args)

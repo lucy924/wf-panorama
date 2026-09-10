@@ -76,6 +76,7 @@ workflow get_classifier_input_sample_data {
         make_classifier_input(
             panel_metadata_ch,
             sample_processing.out.snv_panel,
+            sample_processing.out.sv_panel,
             sample_processing.out.mod_results,
             sample_processing.out.immune
         )
