@@ -63,7 +63,7 @@ process RUN_WF_HUMVAR {
     // def humvar_run_dir = "${params.sample_outdir}/wf-humvar-run"
     def humvar_run_dir  = file("${params.sample_outdir}/wf-humvar-run").toAbsolutePath()
     def wfhumvar_dir    = file("${projectDir}/modules/wf_humvar/wf-human-variation").toAbsolutePath()
-    def wfhumvar_tag    = "v2.6.0"
+    def wfhumvar_tag    = "v2.7.2"
     def add_ont_basecaller = (params.ont_basecaller && params.ont_basecaller != 'null')
         ? "--override_basecaller_cfg \"${params.ont_basecaller}\""
         : ""
@@ -76,7 +76,6 @@ process RUN_WF_HUMVAR {
     # ---------------------------------------------------------------------------
     WF_DIR="${wfhumvar_dir}"
     WF_TAG="${wfhumvar_tag}"
-    override_basecaller="${add_ont_basecaller}"
 
     if [ ! -d "\${WF_DIR}/.git" ]; then
         echo "wf-human-variation not found at \${WF_DIR} — cloning \${WF_TAG}..."
@@ -109,13 +108,6 @@ process RUN_WF_HUMVAR {
     # Output dir for this task (relative, inside task workDir — captured by Nextflow)
     mkdir -p wf-humvar
 
-    # add in override basecaller flag if params is a string
-    if [[ -n "${params.ont_basecaller}" && "${params.ont_basecaller}" != "null" ]]; then
-        add_ont_basecaller="--override_basecaller_cfg \"${params.ont_basecaller}\""
-    else
-        add_ont_basecaller=""
-    fi
-
     echo "Running wf-human-variation for sample ${sample_name} with BAM dir ${bam_dir}"
 
     nextflow run ${wfhumvar_dir} \
@@ -129,12 +121,11 @@ process RUN_WF_HUMVAR {
         --mod \
         --str \
         --phased \
-        --output_gene_summary \
         --output_xam_fmt bam \
         --modkit_args "--preset traditional" \
-        --bam_min_coverage ${params.wf_humvar_bam_min_coverage} \$add_ont_basecaller \
+        --bam_min_coverage ${params.wf_humvar_bam_min_coverage} ${add_ont_basecaller} \
         -profile ${params.wf_humvar_profile} \
-        -process.executor slurm \
+        -process.executor ${params.wf_humvar_executor} \
         -w \$NXF_WORK \
         -with-report ${humvar_run_dir}/execution/report.html \
         -with-timeline ${humvar_run_dir}/execution/timeline.html \
@@ -145,5 +136,3 @@ process RUN_WF_HUMVAR {
     ls -R wf-humvar
     """
 }
-
-// process.executor slurm may not work or be appropriate for running on other systems. Use with caution.

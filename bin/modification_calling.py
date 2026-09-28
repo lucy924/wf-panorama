@@ -3,8 +3,9 @@ import argparse
 import pandas as pd
 import os
 import numpy as np
-from shared_functions import preclin_stage_panel_result_header, variant_prep, CHROMOSOMES, SCORING_TYPE, RESULT_OPTIONS, BIOMARKER_NAME, NOTES, get_BM_TYPE_FULL, get_full_SCORING_TYPE
+from shared_functions import preclin_stage_panel_result_header, variant_prep, CHROMOSOMES, SCORING_TYPE, RESULT_OPTIONS, BIOMARKER_NAME, NOTES, get_BM_TYPE_FULL, get_full_SCORING_TYPE, EXP_RATIO_COMPONENTS
 
+notes_placeholder = ""
 
 
 def export_for_methatlas(df, fp):
@@ -104,7 +105,7 @@ def merge_data_to_list_dicts(results_df, panel_data):
 
         # check if pos is in any of the metadata entries
         # if so, add all data to results
-        for i, row_a in group_chr[1].iterrows():
+        for i, row_a in group_chr[1].iterrows():  # this loop could probs be replaced with a vcf file lookup and make it a couple mins instead of a couple hours
             for j, row_b in chr_entries.iterrows():
                 if row_b["min"] <= row_a["pos"] <= row_b["max"]:
                     # print(row_a)
@@ -218,12 +219,15 @@ def get_region_methylation(data):
 def format_results_for_preclin_output(results_df, all_mod_data):
     """Make preclin panel output"""
     
-    BM_TYPE_FULL = get_BM_TYPE_FULL(path2panel=args.panel)
-    SCORING_TYPE_FULL = get_full_SCORING_TYPE(path2panel=args.panel)
+    BM_TYPE_FULL = get_BM_TYPE_FULL(path2panel='/home/dejlu44p/Panorama/20260910-BRCA_3plex/work/a7/dff2124374867f50c19d363d7a284d/panel_metadata_BCA_BRCA.csv')
+    SCORING_TYPE_FULL = get_full_SCORING_TYPE(path2panel='/home/dejlu44p/Panorama/20260910-BRCA_3plex/work/a7/dff2124374867f50c19d363d7a284d/panel_metadata_BCA_BRCA.csv')
     
     bm_classif_panel_df = pd.DataFrame(columns=preclin_stage_panel_result_header)
     panel_result_header_rawmod = preclin_stage_panel_result_header.copy()
-    panel_result_header_rawmod.extend(['Meth (beta >= 0.8)', 'Total'])
+    # panel_result_header_rawmod.extend(['Meth (beta >= 0.8)', 'Total'])
+    # insert extension before last column (Notes) so that Notes is still the last column
+    panel_result_header_rawmod.insert(-1, 'Number Methylated (where beta >= 0.8)')
+    panel_result_header_rawmod.insert(-1, 'Total reads (methylated + unmethylated)')
     bm_classif_panel_rawmod_df = pd.DataFrame(columns=panel_result_header_rawmod)
 
     for i, (panel_id, data) in enumerate(results_df.groupby(by="ID", observed=False)):
@@ -260,11 +264,12 @@ def format_results_for_preclin_output(results_df, all_mod_data):
             raise ValueError(f"code not ready for DNA methylation region = {panel_entry['DNA methylation region']} or variant type = {panel_entry[BM_TYPE_FULL]}")
         
         if panel_entry[BM_TYPE_FULL] != 'exp_ratio':
-            bm_classif_panel_df.loc[i] = [panel_id, panel_entry[BIOMARKER_NAME], panel_entry[SCORING_TYPE_FULL], biomarker_type, panel_entry[RESULT_OPTIONS], result] 
+            bm_classif_panel_df.loc[i] = [panel_id, panel_entry[BIOMARKER_NAME], panel_entry[SCORING_TYPE_FULL], biomarker_type, panel_entry[RESULT_OPTIONS], result, notes_placeholder] 
         
-        bm_classif_panel_rawmod_df.loc[i] = [panel_id, panel_entry[BIOMARKER_NAME], panel_entry[SCORING_TYPE_FULL], biomarker_type, panel_entry[RESULT_OPTIONS], result, meth, total] 
+        bm_classif_panel_rawmod_df.loc[i] = [panel_id, panel_entry[BIOMARKER_NAME], panel_entry[SCORING_TYPE_FULL], biomarker_type, panel_entry[RESULT_OPTIONS], result, meth, total, notes_placeholder] 
         
     return bm_classif_panel_df, bm_classif_panel_rawmod_df
+
 
 
 def add_exp_ratio_to_results(bm_classif_panel_df, bm_classif_panel_rawmod_df, panel_data_exp_ratio):
@@ -277,7 +282,7 @@ def add_exp_ratio_to_results(bm_classif_panel_df, bm_classif_panel_rawmod_df, pa
         data = data.set_index('ID')
         data_entry = data.loc[panel_id].to_dict()
         
-        ratio_name = panel_input_exp_ratio_idxd.loc[panel_id]['Expression Ratio Components']
+        ratio_name = panel_input_exp_ratio_idxd.loc[panel_id][EXP_RATIO_COMPONENTS]
         gene_name = panel_input_exp_ratio_idxd.loc[panel_id][BIOMARKER_NAME]
         region_result = data_entry['Result']
         if ratio_name not in exp_ratio_data.keys():
@@ -303,7 +308,7 @@ def add_exp_ratio_to_results(bm_classif_panel_df, bm_classif_panel_rawmod_df, pa
         print(ratio1, ratio2, val1, val2, id1, id2)
         result = val1/val2
         
-        bm_classif_panel_df.loc[i] = [f'{id1}/{id2}', f'{ratio1}/{ratio2}', 'continuous', 'exp_ratio', '0.0-10.0', result]
+        bm_classif_panel_df.loc[i] = [f'{id1}/{id2}', f'{ratio1}/{ratio2}', 'continuous', 'exp_ratio', '0.0-10.0', result, notes_placeholder]
         i += 1
         
     return bm_classif_panel_df
@@ -349,6 +354,11 @@ def main(args):
     # Format for panel output
     # Additional table that has number of methylated positions in region calculations if needed
 
+    # write the inputs here for debugging
+    # results_df.to_csv(args.out_raw, index=True)
+    # all_mod_data.to_csv(args.out_mod, index=True)
+    # debugging end
+    
     bm_classif_panel_df, bm_classif_panel_rawmod_df = format_results_for_preclin_output(results_df, all_mod_data)
 
     # Add exp_ratio results to bm_classif_panel_df

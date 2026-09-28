@@ -83,7 +83,7 @@ Minimum requirements:
 - CPUs = 16
 - Memory = 32GB
 
-*Based off [wf-human-variation](https://github.com/epi2me-labs/wf-human-variation) as this is the most computationally heavy component of the workflow.*
+*Based on [wf-human-variation](https://github.com/epi2me-labs/wf-human-variation) as this is the most computationally heavy component of the workflow.*
 
 ## 🥳 Third-party requirements
 
@@ -100,18 +100,20 @@ Please get in contact with us if you are interested in using an alternative immu
 
 The workflow uses [Nextflow](https://www.nextflow.io/) to manage compute and software resources, therefore Nextflow will need to be installed before attempting to run the workflow.
 
-> [!WARNING]
-> This workflow has been tested successfully using Nextflow v25.10.4. Panorama currently breaks on Nextflow v26.
+> [!WARNING]  
+> This workflow has been tested successfully using Nextflow v25.04.8. Panorama currently breaks on Nextflow v26.
 
-The workflow can be run using [Singularity](https://docs.sylabs.io/guides/3.0/user-guide/index.html), [Apptainer](https://apptainer.org/) (the open-source fork of Singularity, common on newer HPC systems). Please note it has not been tested using [Docker](https://www.docker.com/).
-<!-- This is controlled by the
-[`-profile`](https://www.nextflow.io/docs/latest/config.html#config-profiles)
-parameter as exemplified below. -->
+The workflow can be run using [Singularity](https://docs.sylabs.io/guides/3.0/user-guide/index.html), [Apptainer](https://apptainer.org/) (the open-source fork of Singularity, common on newer HPC systems).
 
-It is not required to clone or download the git repository in order to run the workflow.
-<!-- More information on running EPI2ME workflows can be found on the [EPI2ME website](https://labs.epi2me.io/wfindex). -->
+> [!TIP]  
+> We recommend using a clean environment with nextflow and apptainer installed.
+> ```
+> conda create -n pano_env
+> conda activate pano_env
+> conda install bioconda::nextflow==25.10.4
+> conda install conda-forge::apptainer
 
-Once nextflow is installed, the following command can be used to obtain the workflow. This will pull the repository in to the assets folder of Nextflow and provide a list of all parameters available for the workflow as well as an example command:
+Once nextflow and apptainer is installed, the following command can be used to obtain the workflow. This will pull the repository in to the assets folder of Nextflow and provide a list of all parameters available for the workflow as well as an example command:
 
 ```sh
 nextflow run Genomic-and-Epigenomic-Research-Lab-NZ/wf-panorama --help
@@ -161,7 +163,7 @@ Place these in the directory: `wf-panorama/containers/`
 You will need to obtain your preferred human genome and associated index file and put it in the `wf-panorama/resources/` directory.  
 During development the genome build `GCA_000001405.15_GRCh38_no_alt_analysis_set.fna` was used. Any genome build of hg38 should work, though other builds have not been tested.  
 
-> [!TIP]
+> [!TIP]  
 > You should be able to use a symlink (aka symbolic link, alias, shortcut) to avoid having multiple copies of the human genome scattered around your system. To add a symlink:  
 >
 > ```sh
@@ -171,7 +173,7 @@ During development the genome build `GCA_000001405.15_GRCh38_no_alt_analysis_set
 >
 > Please note symlinks haven't been tested in this workflow yet. If there are mysterious errors try copying the genome to this location instead. Please let us know if you use symlinking wth the workflow and it works!
 
-> [!WARNING]
+> [!WARNING]  
 > Methylation sites have been annotated by their Illumina array probe names, and mapped to hg38 genome locations. Unless you rebuild all the files in this workflow that use genome locations, using the T2T genome build will NOT work for the immune infiltrate section and/or will give wrong results!
 
 To generate the genome index file using samtools (recommended):  
@@ -225,7 +227,7 @@ nextflow run Genomic-and-Epigenomic-Research-Lab-NZ/wf-panorama \
 For further information about running a workflow on
 the command line see <https://labs.epi2me.io/wfquickstart/>
 
-> [!Tip]
+> [!TIP]
 > If you are new to command line:  
 > Install Nextflow (<https://docs.seqera.io/nextflow/#get-started>). Once you have done that, come back here. Note that if you are on a cluster compute you may already have nextflow installed and just need to load it with something like `module load nextflow`.
 > "Change directory" (`cd`) to a directory (another name for "folder") where you want to do your analysis.  
@@ -248,24 +250,19 @@ Profiles are selected with the `-profile` flag on the command line. Combine an *
 
 | Executor profile | Description |
 | ---------------- | ----------- |
-| *(none / standard)* | Local execution with Docker |
-| `local` | Explicit local execution, no container required |
+| `local` | Explicit local execution |
 | `slurm` | SLURM HPC cluster |
-| `lsf` | LSF HPC cluster |
-| `pbs` | PBS/Torque HPC cluster |
-| `test` | Local execution with minimal parameters for install verification |
 
 | Container profile | Description |
 | ----------------- | ----------- |
-| *(none / standard)* | Docker |
 | `singularity` | Singularity (traditional HPC) |
 | `apptainer` | Apptainer (newer HPC systems, open-source Singularity fork) |
 
-> [!TIP]
-> On HPC systems, use `--singularity_cache /path/to/shared/cache` to point to a shared container cache directory and avoid re-downloading containers for each user.
+> [!INFO]
+> The `local` profile uses apptainer/singularity which should be included in your conda environment.
 
 > [!WARNING]
-> At this stage, the workflow has only been tested on a slurm HPC cluster using Apptainer. While Nextflow should allow the pipeline to be transferable, there may be some issues with other compute setups, and with using Docker.
+> At this stage, the workflow has been tested on a Slurm HPC cluster using Apptainer. While Nextflow should allow the pipeline to be transferable, there may be some issues with other compute setups, and is not currently set up for Docker.
 
 Resource limits can be adjusted with `--max_memory`, `--max_cpus`, and `--max_time` to match your system's available resources.
 
@@ -414,6 +411,8 @@ nextflow run Genomic-and-Epigenomic-Research-Lab-NZ/wf-panorama \
     -resume
 ```
 
+Expected runtime: a couple of hours for `wf-human-variation`, a couple of hours for `modification_calling`. Test data has taken ~4-5 hours total.
+
 ### Mode `clinical_mode`
 
 #### Input
@@ -447,6 +446,7 @@ nextflow run Genomic-and-Epigenomic-Research-Lab-NZ/wf-panorama \
     -profile slurm,singularity \
     -resume
 ```
+Expected runtime: a couple of hours for `wf-human-variation`, a couple of hours for `modification_calling`. Test data has taken ~4-5 hours total.
 
 ### Outputs for clin_trial and clinical modes
 
@@ -621,7 +621,8 @@ This protocol currently uses [epi2me-labs/wf-human-variation v2.6.0](https://git
 <!-- Note:  
 Reasons not to use wf-somatic-variation
 - not a comparison to patient normal 
-- In tumour-only mode, SNV analysis is reliant on ClairS and needs to be tuned for each basecaller model, wf-human-variation is more up-to-date with available models -->
+- In tumour-only mode, SNV analysis is reliant on ClairS and needs to be tuned for each basecaller model, wf-human-variation is more up-to-date with available models 
+- NEW INFO: a matching basecaller model isn't critical for ClairS to run, therefore in the future using wf-somatic-variation in tumour-only momde could be considered -->
 
 
 ## 📜 Pipeline History

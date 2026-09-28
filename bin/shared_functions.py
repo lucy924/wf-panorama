@@ -78,11 +78,11 @@ SCORING_TYPE = "Scoring Type"
 RESULT_OPTIONS = "Result Options"
 RESULT = "Result"
 NOTES = "Notes"
-
+EXP_RATIO_COMPONENTS = "Expression Ratio Components"
 
 preclin_stage_panel_result_header = [BIOMARKER_ID, BIOMARKER_NAME, SCORING_TYPE, BIOMARKER_TYPE, RESULT_OPTIONS, RESULT, NOTES]
 
-variant_dict_columns_to_add = ['ClinVar', 'Significance (ClinVar)', 'Consequence (Clinvar)', 'Reference Allele', 'Variant Allele', 'Genotype', 'HGVS.c', 'HGVS.p', 'SV Length', 'SV Type']
+variant_dict_columns_to_add = ['ClinVar', 'Significance (ClinVar)', 'Consequence (Clinvar)', 'Reference Allele', 'Variant Allele', 'Genotype', 'HGVS.c', 'HGVS.p', 'SV Length', 'SV Type', NOTES]
 
 
 def filter_to_variant_type(panel_metadata_df, variant_type, BM_TYPE_FULL):

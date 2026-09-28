@@ -177,9 +177,23 @@ process snv_prep {
     script:
         // mv ${vcf_clin_raw}.gz ${params.sample}.wf_snp_clinvar.vcf.gz
         """
-        bgzip -k ${vcf_clin_raw}
-        tabix ${vcf_clin_raw}.gz
-        tabix ${vcf_gz}
+        set -euo pipefail
+
+        CLIN_LOCAL="${params.sample}.wf_snp_clinvar.vcf.gz"
+
+        # If input already gzipped -> try to create a hardlink to avoid a full copy.
+        if [[ "${vcf_clin_raw}" == *.gz ]]; then
+            # ln "${vcf_clin_raw}" "\${CLIN_LOCAL}" 2>/dev/null \
+            # || cp -f "${vcf_clin_raw}" "\${CLIN_LOCAL}"
+            echo "Input VCF is already gzipped."
+        else
+            # compress uncompressed VCF
+            bgzip -c "${vcf_clin_raw}" > "\${CLIN_LOCAL}"
+        fi
+
+        # Index both clin and all-SNP VCFs (force overwrite if needed)
+        tabix -f "\${CLIN_LOCAL}"
+        tabix -f "${vcf_gz}"
         """
 }
 
@@ -256,6 +270,25 @@ process immune_infiltrate_mCS {
         """
 }
 
+process plot_immune_infiltrate {
+    tag "plot_immune_infiltrate.${params.sample}"
+    cpus 1
+    memory '8 GB'
+    time '15m'
+    container "file://${projectDir}/containers/general.sif"
+    publishDir "${params.sample_outdir}/immune_infiltrate", mode: 'copy'
+    input:
+        path immune_result
+    output:
+        path "${params.sample}.immune_infiltrate.png", emit: immune_png
+    script:
+        """
+        python3 ${projectDir}/bin/plot_immune_infiltrate.py \
+            --result_data ${immune_result} \
+            --out ${params.sample}.immune_infiltrate.png
+        """
+}
+
 // ---------------------------------------------------------------------------
 // Main sample_processing workflow
 // ---------------------------------------------------------------------------
@@ -324,7 +357,9 @@ workflow sample_processing {
             files.find { it.name =~ /\.wf_snp\.vcf\.gz$/ }
         }
         vcf_clin_raw_ch = wf_humvar_files.map { files ->
-            files.find { it.name =~ /\.wf_snp_clinvar\.vcf$/ }
+            // was files.find { it.name =~ /\.wf_snp_clinvar\.vcf$/ }
+            // accept either .vcf or .vcf.gz from wf-human-variation
+            files.find { it.name =~ /\.wf_snp_clinvar\.vcf(\.gz)?$/ }
         }
         vcf_sv_ch = wf_humvar_files.map { files ->
             files.find { it.name =~ /\.wf_sv\.vcf\.gz$/ }
@@ -368,6 +403,12 @@ workflow sample_processing {
 
         // 5. Immune infiltrate
         immune_infiltrate_mCS(panel_metadata_ch, cibersortx_out_ch)
+        // if plot immune infiltrate is enabled, run the plotting process
+        def immune_plot_ch = Channel.empty()
+        if (params.plot_immune_infiltrate) {
+            plot_immune_infiltrate(immune_infiltrate_mCS.out.immune)
+            immune_plot_ch = plot_immune_infiltrate.out.immune_png
+        }
 
     emit:
         snv_raw      = snv_annotation.out.snv_raw
@@ -376,4 +417,6 @@ workflow sample_processing {
         sv_panel     = sv_annotation.out.sv_panel
         mod_results  = modification_calling.out.mod_results
         immune       = immune_infiltrate_mCS.out.immune
+        immune_plot  = immune_plot_ch
+
 }

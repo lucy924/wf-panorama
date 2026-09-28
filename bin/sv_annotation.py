@@ -81,6 +81,7 @@ def main(args):
             if entry_found:
                 num_variants_found_total += 1
                 rows_found.append(target_ID)
+                
                 log.write(f"  target matched: {target_ID}\n\n")
             elif in_vcf:
                 log.write("  area is in vcf but precise entry not found\n")
@@ -115,6 +116,12 @@ def main(args):
     info_df.index.name = 'ID'
     info_df.reset_index(inplace=True)
     merged_df = pd.merge(variants_metadata_df_svs, info_df, on='ID', how='left')
+    
+    for i, row in merged_df.iterrows():
+        if pd.isna(row[RESULT]):
+            merged_df.at[i, RESULT] = 'absent'
+        if pd.isna(row[NOTES]):
+            merged_df.at[i, NOTES] = 'No variant detected in sample.'
 
     merged_df.to_csv(sv_output_raw, index=False)
 
