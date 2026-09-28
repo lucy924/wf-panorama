@@ -208,7 +208,7 @@ workflow panel_prep {
                                 : file("${projectDir}/resources/hg38_no_alt.chrom_sizes")
 
         def epic_locs = params.Illumina_epic_locs 
-                                ? file("${projectDir}/resources/${params.Illumina_epic_locs}") 
+                                ? file("${params.Illumina_epic_locs}") 
                                 : file("${projectDir}/resources/IlluminaEPIC_genomic_locations_hg38.csv")
         
         def msk_impact_panel = params.msk_impact_panel 
