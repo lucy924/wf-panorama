@@ -216,12 +216,12 @@ def get_region_methylation(data):
     return result, meth, total
 
 
-def format_results_for_preclin_output(results_df, all_mod_data):
+def format_results_for_preclin_output(results_df, all_mod_data, panel_path):
     """Make preclin panel output"""
     
-    BM_TYPE_FULL = get_BM_TYPE_FULL(path2panel='/home/dejlu44p/Panorama/20260910-BRCA_3plex/work/a7/dff2124374867f50c19d363d7a284d/panel_metadata_BCA_BRCA.csv')
-    SCORING_TYPE_FULL = get_full_SCORING_TYPE(path2panel='/home/dejlu44p/Panorama/20260910-BRCA_3plex/work/a7/dff2124374867f50c19d363d7a284d/panel_metadata_BCA_BRCA.csv')
-    
+    BM_TYPE_FULL = get_BM_TYPE_FULL(panel_path)
+    SCORING_TYPE_FULL = get_full_SCORING_TYPE(panel_path)
+
     bm_classif_panel_df = pd.DataFrame(columns=preclin_stage_panel_result_header)
     panel_result_header_rawmod = preclin_stage_panel_result_header.copy()
     # panel_result_header_rawmod.extend(['Meth (beta >= 0.8)', 'Total'])
@@ -323,9 +323,10 @@ def main(args):
     export_for_methatlas(dss_df, args.out_meth)
 
     # Load panel metadata
-    panel_data_mod = variant_prep(args.panel, 'mod')
-    panel_data_exp = variant_prep(args.panel, 'expression')
-    panel_data_exp_ratio = variant_prep(args.panel, 'exp_ratio')
+    panel_path = args.panel
+    panel_data_mod = variant_prep(panel_path, 'mod')
+    panel_data_exp = variant_prep(panel_path, 'expression')
+    panel_data_exp_ratio = variant_prep(panel_path, 'exp_ratio')
 
     all_mod_data = pd.concat([panel_data_mod, panel_data_exp, panel_data_exp_ratio])
 
@@ -359,7 +360,7 @@ def main(args):
     # all_mod_data.to_csv(args.out_mod, index=True)
     # debugging end
     
-    bm_classif_panel_df, bm_classif_panel_rawmod_df = format_results_for_preclin_output(results_df, all_mod_data)
+    bm_classif_panel_df, bm_classif_panel_rawmod_df = format_results_for_preclin_output(results_df, all_mod_data, panel_path)
 
     # Add exp_ratio results to bm_classif_panel_df
     bm_classif_panel_df = add_exp_ratio_to_results(bm_classif_panel_df, bm_classif_panel_rawmod_df, panel_data_exp_ratio)
