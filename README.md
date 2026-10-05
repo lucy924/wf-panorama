@@ -90,6 +90,7 @@ Minimum requirements:
 This program uses MethylCIBERSORT and CIBERSORTx for immune infiltrate deconvolution. CIBERSORTx is provided as a Docker container by the developers, the Alizadeh and Newman labs at <https://cibersortx.stanford.edu/>. You will need to create an account and obtain the Docker token through the "Downloads" page. You do not need to install the Docker container, as it has been provided as an Apptainer build called `cibersort_fractions.sif` (see section [Containers](#containers)). You only need to provide your CIBERSORTx username (email) and token to Panorama for it to run. Please note it will take a few days for the CIBERSORTx developers to process your access request.  
 Please follow all requirements required by the CIBERSORTx developers as stated when you register. Use of Panorama does not override the CIBERSORTx rules and requirements.  
 
+Also note that internet access is required for the CIBERSORT container to authenticate during the run.  
 Please get in contact with us if you are interested in using an alternative immune deconvolution package.  
 
 ## 🏁 Install and run
@@ -101,7 +102,7 @@ Please get in contact with us if you are interested in using an alternative immu
 The workflow uses [Nextflow](https://www.nextflow.io/) to manage compute and software resources, therefore Nextflow will need to be installed before attempting to run the workflow.
 
 > [!WARNING]  
-> This workflow has been tested successfully using Nextflow v25.04.8. Panorama currently breaks on Nextflow v26.
+> This workflow has been tested successfully using Nextflow v25.04.6 - v25.10.4. Panorama currently breaks on Nextflow v26.
 
 The workflow can be run using [Singularity](https://docs.sylabs.io/guides/3.0/user-guide/index.html), [Apptainer](https://apptainer.org/) (the open-source fork of Singularity, common on newer HPC systems).
 

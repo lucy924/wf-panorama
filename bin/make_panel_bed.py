@@ -134,6 +134,9 @@ def add_immune_infiltrate_locations(input_bed, immune_reference_dataset, epic_lo
                 }
             )
     else:
+        # Override the immune_reference_dataset found by cancer type
+        # immune_reference_dataset = "/path/to/manual/override/immune_reference.csv"
+        
         imm_ref = pd.read_csv(immune_reference_dataset)
         if 'NAME' in imm_ref.columns:
             imm_ref.rename(columns={'NAME': 'CpGs'}, inplace = True)
