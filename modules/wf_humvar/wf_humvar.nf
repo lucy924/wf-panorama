@@ -61,26 +61,28 @@ process RUN_WF_HUMVAR {
     // outer pipeline retries — this is what allows -resume to work on the
     // nested wf-human-variation run.
     // def humvar_run_dir = "${params.sample_outdir}/wf-humvar-run"
-    def humvar_run_dir  = file("${params.sample_outdir}/wf-humvar-run").toAbsolutePath()
-    def wfhumvar_dir    = file("${projectDir}/modules/wf_humvar/wf-human-variation").toAbsolutePath()
-    def wfhumvar_tag    = "v2.7.2"
-    def add_ont_basecaller = (params.ont_basecaller && params.ont_basecaller != 'null')
+    def humvar_run_dir       = file("${params.sample_outdir}/wf-humvar-run").toAbsolutePath()
+    def wfhumvar_dir         = file("${projectDir}/modules/wf_humvar/wf-human-variation").toAbsolutePath()
+    def wfhumvar_ref         = "epi2me-labs/wf-human-variation"
+    def wfhumvar_tag         = "v2.7.2"
+    def add_ont_basecaller   = (params.ont_basecaller && params.ont_basecaller != 'null')
         ? "--override_basecaller_cfg \"${params.ont_basecaller}\""
         : ""
     """
     set -euo pipefail
 
     # ---------------------------------------------------------------------------
-    # Ensure wf-human-variation v2.6.0 is present at the expected local path.
+    # Ensure wf-human-variation v2.7.2 is present at the expected local path.
     # If the directory is missing or is not at the correct tag, clone it fresh.
     # ---------------------------------------------------------------------------
     WF_DIR="${wfhumvar_dir}"
     WF_TAG="${wfhumvar_tag}"
 
     if [ ! -d "\${WF_DIR}/.git" ]; then
-        echo "wf-human-variation not found at \${WF_DIR} — cloning \${WF_TAG}..."
+        echo "wf-human-variation not found at \${WF_DIR} — pulling \${WF_TAG}..."
         git clone --depth 1 --branch "\${WF_TAG}" \
             https://github.com/epi2me-labs/wf-human-variation.git "\${WF_DIR}"
+            git -C "\${WF_DIR}" checkout -b "\${WF_TAG}"-branch "\${WF_TAG}"
     else
         CURRENT_TAG=\$(git -C "\${WF_DIR}" describe --tags --exact-match 2>/dev/null || echo "unknown")
         if [ "\${CURRENT_TAG}" != "\${WF_TAG}" ]; then
@@ -88,6 +90,7 @@ process RUN_WF_HUMVAR {
             rm -rf "\${WF_DIR}"
             git clone --depth 1 --branch "\${WF_TAG}" \
                 https://github.com/epi2me-labs/wf-human-variation.git "\${WF_DIR}"
+            git -C "\${WF_DIR}" checkout -b "\${WF_TAG}"-branch "\${WF_TAG}"
         else
             echo "wf-human-variation \${WF_TAG} already present at \${WF_DIR}"
         fi
