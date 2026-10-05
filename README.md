@@ -158,7 +158,7 @@ On the plus side, you shouldn't need to download or set up any other packages!
 
 Containers:  
 
-- general.sif (0.4 GB)
+- general.sif (0.5 GB)
 - methylcibersort.sif (1.8 GB)
 - cibersortx_fractions.sif (0.3 GB)  
 
