@@ -35,9 +35,9 @@ def parse_panel(panel_csv_fp):
     #                 f"Please check your input file ({args.panel_csv}) and ensure all coordinate values are whole numbers."
     #             )
     
-    panel_csv = panel_csv[~panel_csv.ID.str.startswith("3")]
-    panel_csv = panel_csv[~panel_csv.ID.str.startswith("4")]
-    panel_csv = panel_csv[~panel_csv.ID.str.startswith("5")]
+    panel_csv = panel_csv[~panel_csv.ID.str.startswith("3")]  # combined markers
+    panel_csv = panel_csv[~panel_csv.ID.str.startswith("4")]  # immune infiltrate markers
+    panel_csv = panel_csv[~panel_csv.ID.str.startswith("5")]  # non-molecular markers
     
     panel_csv = panel_csv.astype({"start pos": "int64", "end pos": "int64", "length": "int64"})
     

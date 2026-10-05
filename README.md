@@ -47,6 +47,11 @@
   - [🎉 Acknowledgements](#-acknowledgements)
   - [📚 References](#-references)
   - [🤖 AI Assistance](#-ai-assistance)
+  - [🔧 Troubleshooting](#-troubleshooting)
+    - [Error: method optional() on null object](#error-method-optional-on-null-object)
+    - [Error: Building .sif images for wf-human-variation fails](#error-building-sif-images-for-wf-human-variation-fails)
+    - [Error: scripts from wf-human-variation "Permission denied"](#error-scripts-from-wf-human-variation-permission-denied)
+    - [Error: wf-human-variation has stopped partway through and you want to resume it](#error-wf-human-variation-has-stopped-partway-through-and-you-want-to-resume-it)
 
 ## 🧬 Introduction
 
@@ -252,7 +257,7 @@ Profiles are selected with the `-profile` flag on the command line. Combine an *
 | Executor profile | Description |
 | ---------------- | ----------- |
 | `local` | Explicit local execution |
-| `slurm` | SLURM HPC cluster |
+| `hpc_slurm` | SLURM HPC cluster |
 
 | Container profile | Description |
 | ----------------- | ----------- |
@@ -538,29 +543,57 @@ An example of the csv can be found here: [demo_input/panel_metadata.csv](demo_in
 
 <!-- TODO: Add references to the clinical report -->
 
-| Parameter name                      | Type    | Required? | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
-|-------------------------------------|---------|-----------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| ID                                  | string  | Required  | A unique ID number 3 characters long (e.g. 001).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
-| Biomarker Name                      | string  | Required  | A name suitable for the biomarker. Initially used for gene names. Can be used for multiple biomarkers.                                                                                                                                                                                                                                                                                                                                                                                                                          |
-| Biomarker Type                      | string  | Required  | One of: snv, sv, mod, area_mutations, expression, exp_ratio, immune_ratio, immune_inf, microsatellite, demographic, clinicopathology.                                                                                                                                                                                                                                                                                                                                                                                           |
-| Panel or Area of Interest?          | string  | Required  | Is this part of the Panel or is it an extra region (Area of Interest) that's been individually requested? Options are "Panel" or "AOI". AOI is irrelevant during clinical trial, everything is part of the "Panel".                                                                                                                                                                                                                                                                                                                                                                                          |
-| chrom, start pos, end pos           | strings | Required  | Genome coordinates of the desired area. Entries in "chrom" column must be in the format "chr1". Columns "start pos" and "end pos" handle both comma separated numbers and normal numbers.                                                                                                                                                                                                                                                                                                                                                                                         |
-| length                              | number  | Optional  | Length of the genomic region. Will auto calculate.                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
-| strand                              | string  | Optional  | Which strand is the feature of interest on? "+" or "-". Required if the answer for "Is this record the whole gene" is "Yes".                                                                                                                                                                                                                                                                                                                                                            |
-| Scoring Type                        | string  | Required  | Options are: "genotypic", "continuous" or "categorical". Others may be added in the future. If this is not included there will be no automatic analysis as part of the panel.                                                                                                                                                                                                                                                                    |
-| Result Options                      | string  | Required  | All possible results. For genotypic data, single genotype in the format “Allele 1\|Allele 2”, or multiple genotypes separated by a “/“ character “Allele 1\|Allele 2/Allele 1\|Allele 2/Allele 1\|Allele 2”. For continuous data, a range in the format: 0.0-1.0. For categorical data, the options separated by "/". If this is not included there will be no automatic analysis as part of the panel.                                             |
-| Result                              | string  | Optional  | Available for Clinicopathologic and Demographic results.                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
-| Notes                               | string  | Optional  | Any notes the user wants to add.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
-| References                          | string  | Optional  | The references where the biomarker was found. Will be added to the final report in the future.                                                                                                                                                                                                                                                                                                                                                                                          |
-| Is variant in coding region? (snv)   | string  | Required  | "Yes" or "No".                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
-| SNP ID (snv)                        | string  | Optional  | rs ID number.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
-| Is variant in coding region? (mod)   | string  | Required  | "Yes" or "No".                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
-| Is this record the whole gene? (mod) | string  | Required  | "Yes" or "No". If "Yes", the target region will be extended to include promoter (2000 bp) and downstream (1000 bp). Also the "strand" is required.                                                                                                                                                                                                                                                                                                                                     |
-| Illumina EPIC ID (mod)               | string  | Optional  | The EPIC id associated with the modification site.                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
-| DNA methylation region (mod)         | string  | Required  | Options are "position" (for a single site), "promoter", "intragenic", or "downstream".*                                                                                                                                                                                                                                                                                                                                                                                                |
-| Is variant in coding region? (area_mutations)   | string  | Optional  | "Yes" or "No".                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
-| Is this record the whole gene? (area_mutations) | string  | Required  | "Yes" or "No". If "Yes", the target region will be extended to include promoter (2000 bp) and downstream (1000 bp). Also the "strand" is required.                                                                                                                                                                                                                                                       |
-| Expression Ratio Components (exp_ratio)         | string  | Required  | Each component of the ratio has a separate biomarker panel ID number, and the “Biomarker Name” must match the entry in “Expression Ratio Components”. Format is "Biomarker Name 1"/"Biomarker Name 2".                                                                                                                     |
+This workflow expects a CSV metadata table describing every biomarker in the panel. A validated example is provided at `demo_input/panel_metadata.csv`.
+
+**Important rules**  
+- ID must be a 3-character string (e.g. "001"). Keep it as text (not numeric) so leading zeros are preserved.
+- Do not change rows with Biomarker Type `immune_inf` — these are required for immune deconvolution.
+- ID ranges:
+  - 001–299: individual molecular biomarkers (snv, sv, mod, area_mutations, expression, microsatellite, etc.)
+  - 301–399: composite markers (derived from multiple panel entries)
+  - 401–499: immune-related outputs / immune_ratio / immune_inf
+  - 501–599: demographic / clinicopathology
+- Coordinate columns in the CSV may contain commas in the numbers (e.g. "1,234,567"). The pipeline will parse these — but prefer plain integers if possible.
+- If "Is this record the whole gene?" is "Yes" for mod/area_mutations entries, the pipeline will extend coordinates by promoter (2000 bp upstream) and downstream (1000 bp) before adding buffering for adaptive sampling. This is why the "strand" is required.
+
+Required CSV columns (as used in the provided CSV)   
+| CSV column header | Type | Required? | Notes / valid values |
+|-------------------|------|-----------|----------------------|
+| ID | string | Yes | 3-digit unique identifier, keep as text. |
+| Biomarker name | string | Yes | Human-readable name (e.g. BRCA1, ESR1). |
+| Biomarker Type (...) | string | Yes | Must match one of the supported types: snv, sv, mod, area_mutations, expression, exp_ratio, immune_ratio, immune_inf, microsatellite, composite, demographic, clinicopathology. |
+| Panel or Area of Interest? | string | Yes | "Panel" or "AOI". "AOI" will not be parsed during clin_trial_mode or clinical_mode. |
+| Molecular Group | string | Optional | Text grouping used by downstream reporting/classification. |
+| Is this record the whole gene? | string | Conditional | "Yes" or "No". If "Yes", strand must be provided. |
+| Is variant in coding region? | string | Conditional | "Yes" / "No" (applies to snv/mod/area_mutations as relevant). |
+| SNP ID | string | Optional | e.g. rsIDs for SNVs. |
+| Result Options | string | Required for scoring | For genotypic: "Allele1\|Allele2/...". For continuous: "min-max" (e.g. 0.0-1.0). For categorical: options separated by "/". |
+| Illumina EPIC ID | string | Optional | EPIC probe ID for mod entries when available. |
+| Expression Ratio Components | string | Conditional | For exp_ratio entries, format "GeneA/GeneB" (components referenced by Biomarker name). |
+| Combined Marker Components | string | Optional | For composite markers, list component IDs or names. |
+| Fusion Components | string | Optional | For fusion (sv) entries, format "GeneA/GeneB" (components referenced by Biomarker name). |
+| DNA methylation region | string | Conditional | For mod entries: one of "position", "promoter", "intragenic", "downstream". |
+| Scoring Type (categorical, continuous, genotypic) | string | Conditional | Defines how the result will be calculated. |
+| Notes | string | Optional | Free text notes for the biomarker. For user reference only. |
+| WARNINGS | string | Optional | Any warnings or special handling notes. For user reference only. |
+| References | string | Optional | Semicolon-separated references for the biomarker. For user reference only. Future releases may incorporate these into the clinical report. |
+| chrom | string | Conditional | Chromosome name, e.g. "chr1". |
+| start pos | integer | Conditional | Start coordinate (may contain commas). |
+| end pos | integer | Conditional | End coordinate (may contain commas). |
+| length | integer | Optional | Can be blank; pipeline will calculate if missing. |
+| strand | string | Conditional | "+" or "-". Required if "Is this record the whole gene?" is "Yes". |
+| Result | string | Optional | For clinicopathologic / demographic values. Using a copy of the main panel sheet with these values filled in per sample will pass the results through the clin_trial_mode to be output with final csv output file. |
+
+Practical tips  
+- Keep the CSV column headers exactly as in the example file to avoid parsing errors.
+- For methylation (mod) entries you can supply either a single position (for single CpG) or a broader region (promoter/intragenic/downstream). The mode --make_target_bed will expand the target appropriately for adaptove sampling.
+- Use the example CSV to see how composite markers (IDs in the 300s) reference component biomarkers (e.g. HOXB13/IL17BR for an exp_ratio).
+- If you plan adaptive sampling, first run --make_target_bed with your panel CSV to generate the MinKNOW target files; those files include extra regions required for immune deconvolution.
+
+Example  
+- See `demo_input/panel_metadata.csv` for a full, real-world example that includes snv, sv, mod, expression, exp_ratio, microsatellite and composite entries.
+- See `demo_input/panel_metadata_template.xlsx` for a modifiable excel sheet to fill out. "Save As" csv to output to appropriate format, and place in your project directory to be called during the Panorama run.
+
 
 <!-- ## Troubleshooting -->
 
@@ -660,3 +693,61 @@ Development of this project used AI-assisted coding tools:
 
 AI was used for language refactoring from Snakemake to Nextflow, and implementing industry-standard conventions. It was also used for wiring of Nextflow components and debugging.  
 AI tools were used interactively. Outputs were evaluated, edited, and validated by the author/s. No code was directly incorporated without review.  
+
+## 🔧 Troubleshooting
+
+### Error: method optional() on null object
+**Error:**   
+```sh
+ERROR ~ Cannot invoke method optional() on null object
+```
+when wf-human-variation tries to run  
+
+**Problem:** incompatibile nextflow version  
+
+**Fix:** Ensure a compatible nextflow version is being used (examples are: v25.04.6, v25.04.8, v25.10.4)
+
+### Error: Building .sif images for wf-human-variation fails
+**Error:**  
+On first run of clin_trial_mode or clinical_mode, the workflow will download wf-human-variation and all the associated containers into the `wf-panorama/containers/singularity` directory. You may come across errors such as this:
+```
+FATAL:   While making image from oci registry: error fetching image to cache: while building SIF from layers: while creating squashfs: /usr/libexec/apptainer/bin/mksquashfs command failed: exit status 137
+```
+**Problem:** This may be due to an unstable internet connection or similar.   
+
+**Fix:** You can manually pull the images that show as failed in the .nextflow.log *from the work directory stated in the error*:  
+```sh
+cd /path/to/wf-panorama/containers/singularity
+singularity pull --name ontresearch-wf-human-variation-snp-sha8cc7e88.img docker://ontresearch/wf-human-variation-snp:sha8cc7e88ff71bf593d7852309a31d3adb29a7caeb
+# ...and any other images from the log
+```
+
+### Error: scripts from wf-human-variation "Permission denied"
+
+**Error:**  
+```
+    .command.sh: line 2: /projects/uow/GERL/dejlu879/Panorama/wf-panorama/modules/wf_humvar/wf-human-variation/bin/resolve_clair3_model.py: Permission denied
+```
+or   
+```
+    .command.sh: line 2: /projects/uow/GERL/dejlu879/Panorama/wf-panorama/modules/wf_humvar/wf-human-variation/bin/workflow-glue: Permission denied
+```  
+
+**Problem:**  Unsure, potentially something to do with manual downloading the .sif containers above.
+
+**Fix:**  
+```
+chmod a+rx /path/to/wf-panorama/modules/wf_humvar/wf-human-variation/bin/*
+```
+Note - you shouldn't need sudo permissions for this as the user who ran the workflow
+
+### Error: wf-human-variation has stopped partway through and you want to resume it
+
+**Problem:** It is difficult to ensure a nested workflow runs with resume working properly, therefore the following steps are recommended if you don't want to begin from the top.  
+
+**Fix:**  
+1. Navigate to the work directory that ran the workflow. This should be detailed on the terminal and in the `.nextflow.log` file.
+2. Edit the `.command.sh` file to ensure `-resume` is at the end of the nextflow command
+3. From that directory, run `bash .command.run`
+4. Navigate back to your original working directory and continue as normal, using the `-resume` flag on the Panorama run.
+
