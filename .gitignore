@@ -40,3 +40,7 @@ resources/containers/general.sif
 resources/containers/methylcibersort.sif
 resources/containers/32165103.zip
 containers/general_old
+modules/wf_humvar/shell_command.sh
+modules/wf_humvar/wf_humvar.temp.nf
+containers/32165103.zip
+containers/legacy/general.sif
