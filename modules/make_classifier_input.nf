@@ -21,7 +21,7 @@ process make_classifier_input {
             --sv ${sv_res} \
             --mod ${mod_res} \
             --immune ${immune_res} \
-            --out ${params.sample}.panel_results.csv
+            --out_final ${params.sample}.panel_results.csv
         """
 }
 
