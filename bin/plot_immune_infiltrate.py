@@ -17,6 +17,20 @@ def get_data_to_plot(immune_panel_results_df):
 
 
 def main(args):
+    
+    celltype_colors = {
+    "Cancer": "#1f77b4",
+    "Fibroblast": "#7f7f7f",
+    "NK": "#2ca02c",
+    "CD4": "#d62728",
+    "Treg": "#9467bd",
+    "Endothelial": "#8c564b",
+    "Bcell": "#e377c2",
+    "Eosinophil": "#ff7f0e",
+    "Neutrophil": "#bcbd22",
+    "CD8": "#17becf",
+}
+    
     immune_panel_results_df = pd.read_csv(args.result_data)
     
     plot_data_df = get_data_to_plot(immune_panel_results_df.copy())
@@ -35,7 +49,9 @@ def main(args):
     plot_data_df_T.columns = plot_data_df_T.iloc[0]
     plot_data_df_T = plot_data_df_T[1:]
     
-    ax = plot_data_df_T.plot.bar(stacked=True, rot=0, figsize=(2, 6))
+    # get colours
+    colours_list = [celltype_colors[c.split(' ')[0]] for c in plot_data_df_T.columns]
+    ax = plot_data_df_T.plot.bar(stacked=True, rot=0, figsize=(2, 6), color=colours_list)
 
     # legend order reversed and place legend outside plot
     handles, labels = ax.get_legend_handles_labels()
