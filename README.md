@@ -55,7 +55,7 @@
 
 ## 🧬 Introduction
 
-This is a bioinformatic pipeline utilising the capabilities of nanopore sequencing ([ONT](https://nanoporetech.com/)) to combine multiple biomarkers of different sources; specifically, mutations, methylation and tumour immune infiltrate. This can enable prediction of drug compatibility in cancer tumours. This pipeline was developed as a clinical bioinformatic workflow that requires little bioinformatic expertise to use. The results of such a tool, with the appropriate pre-clinical trial, can be integrated as part of a protocol aimed to assist molecular pathologists and clinicians to swiftly develop personalised treatment plans.  
+This is a bioinformatic pipeline utilising the capabilities of nanopore sequencing ([ONT](https://nanoporetech.com/)) to combine multiple biomarkers of different sources; specifically, mutations, methylation and tumour immune infiltrate. This can enable prediction of drug compatibility in cancer tumours. This pipeline was developed as a clinical bioinformatic workflow with the goal of reducing the bioinformatic expertise required to process data. The results of such a tool, with the appropriate pre-clinical trial, can be integrated as part of a protocol aimed to assist molecular pathologists and clinicians to swiftly develop personalised treatment plans.  
 
 Panorama is built using the Nextflow workflow language and is intended to be used in the [EPI2ME](https://github.com/epi2me-labs) framework from [Oxford Nanopore Technologies](https://community.nanoporetech.com).
 
@@ -66,14 +66,16 @@ Panorama is intended for use as follows:
    1. Biomarkers are input via a csv file, as detailed in the section [Biomarker panel input](#-biomarker-panel-input) below. This will form the basis of the bed file used for adaptive sampling, and is also used for downstream pipeline processes. Biomarkers can include SNVs, methylation markers, and certain immune infiltrate markers as determined by immune deconvolution using methylation markers.
    2. Tumour samples are nanopore sequenced using adaptive sampling and a bed file containing the target regions required for biomarker analysis. This bed file is produced by this pipeline with the flag `--make_target_bed` and the biomarker csv file using the input parameter `--panel_metadata`. Resulting bam files are used as input to Panorama. Bam files must be basecalled using modified base calling (5mC+5hmC contexts), and aligned to the hg38 genome.
    3. Using the flag `--clin_trial_mode` the pipeline will output sample data as a csv file corresponding to the input biomarkers.
-   4. Following patient sequence data collection, the researchers will carry out their own classifier development using the biomarker results identified by this pipeline. This is outside this tool's scope and presumably will involve some kind of machine learning. Results are added to the original biomarker input csv file and used as input for clinical reporting.
+   4. Following patient sequence data collection, the researchers will carry out their own classifier development using the biomarker results identified by this pipeline. This is outside this tool's scope and presumably will involve some kind of machine learning. Resulting models can be input to the `--clinical_mode` as is. Alternatively, results can be added to the original biomarker input csv file if in hazard ratio format or similar and used as input for clinical reporting.  
+   
+Please get in contact with the developers if you want to use this tool in a clinical trial and we will assist/collaborate with trial design, clinical reporting development, and ensuring `--clin_trial_mode` is suitable.
 
 ### Stage Two: Patient sample reporting following a successful clinical trial 💊
 
    1. Using the results of the pre-clinical trial described above, and the final version of the biomarker input with classifier results, a single patient sample can be submitted to this pipeline as before, and will output a report based on the clinical trial results.  
    2. The pipeline can be run for a clinical sample using the flag `--clinical_mode`.
 
-Please note that Stage Two has not been fully tested as there has been no such clinical trial carried out yet. This is expected to be finalised during/after an actual clinical trial. Please get in contact with the developers if you decide to use this tool in a clinical trial and we will assist/collaborate with trial design and clinical reporting development.
+Please note that Stage Two has not been fully developed as there has been no such clinical trial carried out yet. This is expected to be finalised during/after an actual clinical trial. 
 <!-- eg read depth requirements -->
 
 ## 🖥️ Compute requirements
@@ -233,7 +235,7 @@ nextflow run Genomic-and-Epigenomic-Research-Lab-NZ/wf-panorama \
 For further information about running a workflow on
 the command line see <https://labs.epi2me.io/wfquickstart/>
 
-> [!TIP]
+> [!TIP]  
 > If you are new to command line:  
 > Install Nextflow (<https://docs.seqera.io/nextflow/#get-started>). Once you have done that, come back here. Note that if you are on a cluster compute you may already have nextflow installed and just need to load it with something like `module load nextflow`.
 > "Change directory" (`cd`) to a directory (another name for "folder") where you want to do your analysis.  
@@ -267,7 +269,7 @@ Profiles are selected with the `-profile` flag on the command line. Combine an *
 > [!INFO]
 > The `local` profile uses apptainer/singularity which should be included in your conda environment.
 
-> [!WARNING]
+> [!WARNING]  
 > At this stage, the workflow has been tested on a Slurm HPC cluster using Apptainer. While Nextflow should allow the pipeline to be transferable, there may be some issues with other compute setups, and is not currently set up for Docker.
 
 Resource limits can be adjusted with `--max_memory`, `--max_cpus`, and `--max_time` to match your system's available resources.
@@ -492,7 +494,7 @@ Along with nextflow-generated directories in `work/` (that can be removed when f
 - sample.wf_sv.vcf.gz
 - sample.wf_sv.vcf.gz.tbi
 
-> [!WARNING]
+> [!WARNING]  
 > Please note that on `-resume`, Nextflow checks if `<project_name>/<sample>/.nextflow_cache/wf-humvar` exists. If it does, the whole process is skipped, regardless of the task hash. This is to prevent unnecessary rerunning of this particular computationally heavy task. If you change `--bed`, `--bam`, etc., the cached wf-humvar directory will still be used. If you need to rerun the wf-human-variation part of the workflow, we recommend you manually delete the entire `<sample_name>` directory to enable a clean restart. If you are familiar with Nextflow and feel confident, you can `cd` into the correct directory and set this workflow to `-resume` independent of Panorama if you wish.
 
 #### Output directory `<sample name>/mod_calling`
@@ -536,7 +538,7 @@ An example of the csv can be found here: [demo_input/panel_metadata.csv](demo_in
 > - ID numbers in the 500's are reserved for additional non-molecular factors such as demographic or clinicopathologic indicators that you wish to include in the classifiers but cannot be measured by nanopore sequencing
 > - The biomarker types "immune_inf" must not be changed  
 
-> [!TIP]
+> [!TIP]   
 > A great gene list to bed file converter is called BED-Craft and can be found here: 
 > https://keio-cmg.jp/BED-Craft/index.php
 > This can be used to get coordinates to input into the excel metadata file. Please ensure the buffer size is set to 0, as `make_target_bed` will add the appropriate upstream and downstream regions BEFORE the buffer is added.
