@@ -419,7 +419,7 @@ nextflow run Genomic-and-Epigenomic-Research-Lab-NZ/wf-panorama \
     -resume
 ```
 
-Expected runtime: a couple of hours for `wf-human-variation`, a couple of hours for `modification_calling`. Test data has taken ~4-5 hours total.
+Expected runtime: a couple of hours for `wf-human-variation`, a couple of hours for `modification_calling`. Test data has taken ~4-8 hours total.
 
 ### Mode `clinical_mode`
 

@@ -311,7 +311,7 @@ def raw_panel_csv(snv_df, sv_df, mod_df, immune_df):
     return full_panel_results_df
 
 
-def identify_groups(panel_results_df, metadata_df):
+def identify_groups(raw_panel_results_df, panel_results_df, metadata_df):
     # Identify possible molecular groups
     
     MOL_GROUP_HEADER = get_header(metadata_df, 'Molecular Group')
@@ -323,21 +323,70 @@ def identify_groups(panel_results_df, metadata_df):
     
     # preclin_stage_panel_result_header = [BIOMARKER_ID, BIOMARKER_NAME, SCORING_TYPE, BIOMARKER_TYPE, RESULT_OPTIONS, RESULT]
     
-    for idx, row in panel_results_df.iterrows():
+    # first get all molecular groups
+    mol_groups = list()
+    getting_mol_groups = metadata_df[MOL_GROUP_HEADER].to_list()
+    getting_mol_groups = list(set(getting_mol_groups))
+    for entry in getting_mol_groups:
+        if type(entry) == str:
+            mol_groups.extend(entry.split(';'))
+
+    mol_groups = list(set(mol_groups))
+
+    # Add molecular groups to raw_panel_results_df
+    mol_groups_all_results_dict = dict.fromkeys(mol_groups)
+
+    for idx, row in raw_panel_results_df.iterrows():
         result_id = row[BIOMARKER_ID]
         result_name = row[BIOMARKER_NAME]
         result_scoring_type = row[SCORING_TYPE]
         result_bm_type = row[BIOMARKER_TYPE]
         result_options = row[RESULT_OPTIONS]
+        result = row[RESULT]
 
         # get molecular groups for biomarker
         metadata_dict_entry = metadata_dict.get(result_id, {})
-        mol_group = metadata_dict_entry.get(MOL_GROUP_HEADER, '') # molecular group, if any, separated by ";"
+        if not metadata_dict_entry.get(MOL_GROUP_HEADER, '') or metadata_dict_entry.get(MOL_GROUP_HEADER, '') == '' or type(metadata_dict_entry.get(MOL_GROUP_HEADER, '')) != str:
+            continue
+        result_mol_groups = metadata_dict_entry.get(MOL_GROUP_HEADER, '').split(';')
+        for mol_group in result_mol_groups:
+            if not mol_group:
+                continue
+            if not mol_groups_all_results_dict[mol_group]:
+                mol_groups_all_results_dict[mol_group] = {result_name: result}
+            else:
+                mol_groups_all_results_dict[mol_group][result_name] = result
         
-        components = metadata_dict_entry.get(COMPOSITE_COMPONENT_HEADER)  # combined marker components, if any, separated by "/"
-        fusion_components = metadata_dict_entry.get(FUSION_HEADER)  # fusion components, if any, separated by "/"
         
-    return 
+        # components = metadata_dict_entry.get(COMPOSITE_COMPONENT_HEADER)  # combined marker components, if any, separated by "/"
+        # fusion_components = metadata_dict_entry.get(FUSION_HEADER)  # fusion components, if any, separated by "/"
+    
+    # build new rows for each molecular group and prepend them to panel_results_df
+    new_rows = []
+    for mol_group, comps in mol_groups_all_results_dict.items():
+        if not comps:
+            continue
+        # each component on its own line in the same cell
+        lines = [f"{comp_name}: {comp_result:.2}" for comp_name, comp_result in comps.items()]
+        result_cell = "; ".join(lines)
+        # construct row dict matching panel_results_df columns
+        row = {}
+        for col in panel_results_df.columns:
+            if col == BIOMARKER_NAME:
+                row[col] = mol_group
+            elif col == RESULT:
+                row[col] = result_cell
+            elif col == BIOMARKER_TYPE:
+                row[col] = "Molecular Group"
+            else:
+                row[col] = ""
+        new_rows.append(row)
+    
+    if new_rows:
+        mol_df = pd.DataFrame(new_rows, columns=panel_results_df.columns)
+        panel_results_df = pd.concat([mol_df, panel_results_df], ignore_index=True)
+
+    return panel_results_df
 
 
 def add_demographic_clinicopath_results(path2panel, panel_results_df, metadata_df):
@@ -382,23 +431,22 @@ def main(args):
     panel_results_df = get_composite_biomarkers(
         metadata_df, BM_TYPE_FULL, raw_panel_results_df)
 
-    # Identify possible molecular groups    
-    groups = identify_groups(raw_panel_results_df, metadata_df)  
-    # list for now - in dev. Not sure if needed now that I have the composite df
-
     # Add in the demographic and clinicopathologic results
     panel_results_df = add_demographic_clinicopath_results(args.panel, panel_results_df, metadata_df)
+    
+    # Sort df
+    panel_results_df = panel_results_df.sort_values([BIOMARKER_ID])
 
-    # Set up the final result dataframe
-    # full_panel_results_df = pd.DataFrame(columns=preclin_stage_panel_result_header)
+    # Identify possible molecular groups    
+    panel_results_df = identify_groups(raw_panel_results_df, panel_results_df, metadata_df)  
 
-    # full_panel_results_df = pd.concat([snv_df, sv_df, mod_df, immune_df, panel_results_df])
-    full_panel_results_df = panel_results_df.sort_values([BIOMARKER_ID])
-    full_panel_results_df.reset_index(drop = True, inplace = True)
+    panel_results_df.reset_index(drop=True, inplace=True)
 
+    # format all numerical results in results column to 2 decimal places
+    panel_results_df[RESULT] = panel_results_df[RESULT].apply(lambda x: f"{float(x):.2f}" if isinstance(x, (int, float)) else x)
     
     # save preclin panel
-    full_panel_results_df.to_csv(args.out_final, index=False)
+    panel_results_df.to_csv(args.out_final, index=False)
 
 
 if __name__ == "__main__":
