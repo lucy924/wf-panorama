@@ -12,7 +12,6 @@ ULTRA_HIGH = "very highly expressed"
 
 ######### Set thresholds for expression #########
 # TODO: WARNING: These are arbitary values set during code development. Requires review.
-# REVIEW
 methylation_threshold = 0.8  # if region is >=80% methylated, then consider it methylated
 very_low_expression_threshold = 0.8  # if region is >=80% methylated, then consider it no/low expressed
 low_expression_threshold = 0.65  # if region is 65%-80% methylated, then consider it low expressed
@@ -32,10 +31,73 @@ def get_header(metadata_df, identifier):
                 return mol_group_header
         if mol_group_header is None:
             raise ValueError("Molecular Group header not found in panel metadata file")
+
         
+def get_panel_info(df, biomarker_id):
+    # Get result options, scoring type and biomarker type for a given biomarker from panel metadata file
+    result_options = df.loc[df[BIOMARKER_ID] == biomarker_id, RESULT_OPTIONS].values[0]
+    scoring_type = df.loc[df[BIOMARKER_ID] == biomarker_id, SCORING_TYPE_FULL].values[0]
+    biomarker_type = df.loc[df[BIOMARKER_ID] == biomarker_id, BM_TYPE_FULL].values[0]
+    return result_options, scoring_type, biomarker_type
+
+
+def get_gene_exp_level(results_df, component):
+    
+    # marker components for HER2-low and HER2-ultralow is ERBB2
+
+    if component in results_df[BIOMARKER_NAME].tolist():
+        # check if result is an expression-based marker
+        if results_df.loc[results_df[BIOMARKER_NAME] == component, BIOMARKER_TYPE].values[0] not in ['mod - promoter region', 'expression']:
+            print(f"Component: {component} is not an expression-based marker, skipping...")
+            return None, None
         
+        # check expression level
+        exp_value = results_df.loc[results_df[BIOMARKER_NAME] == component, RESULT].values[0]
+        print(f"Component: {component}, Expression level: {exp_value}")
+        
+        if exp_value >= very_low_expression_threshold:
+            # methylation is 80%
+            # expression is ultra-low
+            exp_level = ULTRA_LOW
+            return exp_level, exp_value
+        elif exp_value >= low_expression_threshold:
+            # methylation is 65%-80%
+            # expression is low
+            exp_level = LOW
+            return exp_level, exp_value
+        elif component == "ERBB2":
+            # only these are relevant for HER2
+            # methylation is <65%
+            # expression is moderate to high
+            # does not meet criteria for HER2-low or HER2-ultralow
+            exp_level = "moderately to highly expressed"
+            return exp_level, exp_value
+        elif exp_value >= high_expression_threshold:
+            # methylation is 40%-65%
+            # expression is moderate
+            exp_level = MODERATE
+            return exp_level, exp_value
+        elif exp_value >= very_high_expression_threshold:
+            # methylation is 10%-40%
+            # expression is high
+            exp_level = HIGH
+            return exp_level, exp_value
+        elif exp_value < very_high_expression_threshold:
+            # methylation is <10%
+            # expression is ultra-high
+            exp_level = ULTRA_HIGH
+            return exp_level, exp_value
+        else:
+            raise ValueError(f"Component: {component} expression level is unknown, something went wrong.")
+        
+    return None, None
+
+
 def get_HR_result(marker_components, results_dict):
-    """HR = Hormone Receptor"""
+    """
+    HR = Hormone Receptor
+    Use when result options are "Positive (High), Positive, Neutral, Negative, Negative (Low)" 
+    """
     
     # marker componenents for HR+ are [ESR1, ESR2, PGR]
     marker_score = 0
@@ -86,63 +148,72 @@ def get_HR_result(marker_components, results_dict):
     return composite_result
 
 
-def get_gene_exp_level(results_dict, component):
+def add_HR_result_to_df(
+    marker_components, results_dict, marker_id, marker_name, results_df, result_options, scoring_type, biomarker_type):
+    """
+    When result options are "Positive (High), Positive, Neutral, Negative, Negative (Low)", the composite result is based on hormone receptor positive code
+    """
+    composite_result = get_HR_result(marker_components, results_dict)
+    print(f"Composite biomarker: {marker_id} ({marker_name}) result is: {composite_result}")
+    # add composites to results_df
+    comp_df = pd.DataFrame(
+        {
+        BIOMARKER_ID: marker_id, 
+        BIOMARKER_NAME: marker_name, 
+        SCORING_TYPE: scoring_type, 
+        BIOMARKER_TYPE: biomarker_type, 
+        RESULT_OPTIONS: result_options, 
+        RESULT: composite_result
+        }, index=([0]))
+    results_df = pd.concat([results_df, comp_df])
+    return results_df
+
+
+def add_TNBC_result_to_df(
+    marker_components, results_dict, marker_id, marker_name, results_df, result_options, scoring_type, biomarker_type):
+    """
+    If any of the markers are high, then breast cancer is not triple negative.
+    Therefore, start with TNBC = True, and if any of the markers are high, then set TNBC = False
+    """
+    TNBC = True
+    for component in marker_components:
+        exp_level, exp_value = get_gene_exp_level(results_df, component)
+        if exp_level in [HIGH, ULTRA_HIGH]:
+            TNBC = False
+            # TODO: note that moderate expression is currently not enough to rule out TNBC according to this code, will need review by expert (if moderate expression should rule out TNBC, then add MODERATE to this list)
+            # REVIEW
     
-    # marker components for HER2-low and HER2-ultralow is ERBB2
-
-    if component in results_dict.keys():
-        # check if result is an expression-based marker
-        if results_dict[component][BIOMARKER_TYPE] not in ['mod - promoter region', 'expression']:
-            print(f"Component: {component} is not an expression-based marker, skipping...")
-            return None
-        
-        # check expression level
-        exp_value = results_dict[component][RESULT]
-        print(f"Component: {component}, Expression level: {exp_value}")
-        
-        if exp_value >= very_low_expression_threshold:
-            # methylation is 80%
-            # expression is ultra-low
-            exp_level = ULTRA_LOW
-            return exp_level, exp_value
-        elif exp_value >= low_expression_threshold:
-            # methylation is 65%-80%
-            # expression is low
-            exp_level = LOW
-            return exp_level, exp_value
-        elif component == "ERBB2":
-            # only these are relevant for HER2
-            # methylation is <65%
-            # expression is moderate to high
-            # does not meet criteria for HER2-low or HER2-ultralow
-            exp_level = "moderately to highly expressed"
-            return exp_level, exp_value
-        elif exp_value >= high_expression_threshold:
-            # methylation is 40%-65%
-            # expression is moderate
-            exp_level = MODERATE
-            return exp_level, exp_value
-        elif exp_value >= very_high_expression_threshold:
-            # methylation is 10%-40%
-            # expression is high
-            exp_level = HIGH
-            return exp_level, exp_value
-        elif exp_value < very_high_expression_threshold:
-            # methylation is <10%
-            # expression is ultra-high
-            exp_level = ULTRA_HIGH
-            return exp_level, exp_value
-        else:
-            raise ValueError(f"Component: {component} expression level is unknown, something went wrong.")
-        
-    return None, None
+    # add composites to results_df
+    comp_df = pd.DataFrame({
+        BIOMARKER_ID: marker_id,
+        BIOMARKER_NAME: marker_name,
+        SCORING_TYPE: scoring_type,
+        BIOMARKER_TYPE: biomarker_type,
+        RESULT_OPTIONS: result_options,
+        RESULT: str(TNBC)
+    }, index=([0]))
+    
+    results_df = pd.concat([results_df, comp_df])
+    
+    return results_df
 
 
-def get_HRD_results():
+def get_HRD_results(marker_components, results_dict, marker_id, marker_name, results_df, result_options, scoring_type, biomarker_type):
     """Implement external module/program/tool for HRD classifier"""
     print("HRD is not yet implemented.")
+    # TODO: Implement HRD classifier
     
-    return
+    comp_df = pd.DataFrame({
+        BIOMARKER_ID: marker_id,
+        BIOMARKER_NAME: marker_name,
+        SCORING_TYPE: scoring_type,
+        BIOMARKER_TYPE: biomarker_type,
+        RESULT_OPTIONS: result_options,
+        RESULT: "Not yet available"
+    }, index=([0]))
+    
+    results_df = pd.concat([results_df, comp_df])
+    return results_df
 
 
 def get_composite_biomarkers(metadata_df, BM_TYPE_FULL, results_df):
@@ -158,58 +229,69 @@ def get_composite_biomarkers(metadata_df, BM_TYPE_FULL, results_df):
     results_dict = results_df.set_index(BIOMARKER_ID).to_dict(orient='index')
     
     # get her2 result
-    HER2_level, HER2_value = get_gene_exp_level(results_dict, component="ERBB2")
+    HER2_level, HER2_value = get_gene_exp_level(results_df, component="ERBB2")
     
     
     for i, marker in composite_biomarkers_df.iterrows():
         marker_id = marker[BIOMARKER_ID]
         marker_name = marker[BIOMARKER_NAME]
         marker_components = marker[COMPOSITE_COMPONENT_HEADER].split('/')
+        result_options, scoring_type, biomarker_type = get_panel_info(metadata_df, marker_id)
         print(f"Composite biomarker: {marker_id} ({marker_name}) is composed of: {marker_components}")
         
         ######### Set up code for 301, HR+ #########
         if marker_name == "HR+":
-            composite_result = get_HR_result(marker_components, results_dict)
-            print(f"Composite biomarker: {marker_id} ({marker_name}) result is: {composite_result}")
-            # add composites to results_df
-            comp_df = pd.DataFrame({BIOMARKER_ID: marker_id, BIOMARKER_NAME: marker_name, SCORING_TYPE: "categorical", BIOMARKER_TYPE: "composite", RESULT_OPTIONS: "Positive (High), Positive, Neutral, Negative, Negative (Low)", RESULT: composite_result}, index=([0]))
-            results_df = pd.concat([results_df, comp_df])
+            # get result_options for HR+ composite biomarker from metadata_df
+            results_df = add_HR_result_to_df(marker_components, results_dict, marker_id, marker_name, results_df, result_options, scoring_type, biomarker_type)
 
         ######### Set up code for 302, 303 HR+ #########
         elif marker_name == "HER2-low":
             if HER2_level == LOW:
-                comp_df = pd.DataFrame({BIOMARKER_ID: marker_id, BIOMARKER_NAME: marker_name, SCORING_TYPE: "categorical", BIOMARKER_TYPE: "composite", RESULT_OPTIONS: f"{LOW}, {ULTRA_LOW}", RESULT: HER2_value}, index=([0]))
+                # only add HER2-low result if ERBB2 is lowly expressed
+                comp_df = pd.DataFrame(
+                    {
+                        BIOMARKER_ID: marker_id, 
+                        BIOMARKER_NAME: marker_name, 
+                        SCORING_TYPE: scoring_type,
+                        BIOMARKER_TYPE: biomarker_type,
+                        RESULT_OPTIONS: result_options, 
+                        RESULT: HER2_value
+                    }, index=([0]))
                 results_df = pd.concat([results_df, comp_df])
         
         elif marker_name == "HER2-ultralow":
             if HER2_level == ULTRA_LOW:
-                comp_df = pd.DataFrame({BIOMARKER_ID: marker_id, BIOMARKER_NAME: marker_name, SCORING_TYPE: "categorical", BIOMARKER_TYPE: "composite", RESULT_OPTIONS: f"{LOW}, {ULTRA_LOW}", RESULT: HER2_value}, index=([0]))
+                # only add HER2-ultralow result if ERBB2 is very lowly expressed/not expressed
+                comp_df = pd.DataFrame(
+                    {
+                        BIOMARKER_ID: marker_id, 
+                        BIOMARKER_NAME: marker_name, 
+                        SCORING_TYPE: scoring_type,
+                        BIOMARKER_TYPE: biomarker_type,
+                        RESULT_OPTIONS: result_options, 
+                        RESULT: HER2_value
+                    }, index=([0]))
                 results_df = pd.concat([results_df, comp_df])
 
         ######### Set up code for 304, TNBC #########
         elif marker_name == "TNBC":
-            # If any of the markers are high, then breast cancer is not triple negative.
-            # Therefore, start with TNBC = True, and if any of the markers are high, then set TNBC = False
-            TNBC = True
-            for component in marker_components:
-                exp_level, exp_value = get_gene_exp_level(results_dict, component)
-                if exp_level in [HIGH, ULTRA_HIGH]:
-                    TNBC = False
-                    # TODO: note that moderate expression is currently not enough to rule out TNBC according to this code, will need review by expert (if moderate expression should rule out TNBC, then add MODERATE to this list)
-                    # REVIEW
-            if TNBC:
-                comp_df = pd.DataFrame({BIOMARKER_ID: marker_id, BIOMARKER_NAME: marker_name, SCORING_TYPE: "categorical", BIOMARKER_TYPE: "composite", RESULT_OPTIONS: "True, False", RESULT: True}, index=([0]))
-                results_df = pd.concat([results_df, comp_df])
-            else:
-                comp_df = pd.DataFrame({BIOMARKER_ID: marker_id, BIOMARKER_NAME: marker_name, SCORING_TYPE: "categorical", BIOMARKER_TYPE: "composite", RESULT_OPTIONS: "True, False", RESULT: False}, index=([0]))
-                results_df = pd.concat([results_df, comp_df])
+            results_df = add_TNBC_result_to_df(marker_components, results_dict, marker_id, marker_name, results_df, result_options, scoring_type, biomarker_type)
 
         ######### Code for 305, HRD, is not implemented yet #########
         elif marker_name == "HRD":
-            get_HRD_results()
+            results_df = get_HRD_results(marker_components, results_dict, marker_id, marker_name, results_df, result_options, scoring_type, biomarker_type)
         
         else:
             print(f"Composite biomarker: {marker_id} ({marker_name}) is not yet implemented in the code.")
+            comp_df = pd.DataFrame({
+                BIOMARKER_ID: marker_id,
+                BIOMARKER_NAME: marker_name,
+                SCORING_TYPE: scoring_type,
+                BIOMARKER_TYPE: biomarker_type,
+                RESULT_OPTIONS: result_options,
+                RESULT: "Not yet available"
+            }, index=([0]))
+            results_df = pd.concat([results_df, comp_df])
             continue
         
     results_df.sort_values([BIOMARKER_ID], inplace=True)
@@ -261,8 +343,8 @@ def identify_groups(panel_results_df, metadata_df):
 def add_demographic_clinicopath_results(path2panel, panel_results_df, metadata_df):
     """load and process demographic and clinicopath results"""
     
-    BM_TYPE_FULL = get_BM_TYPE_FULL(path2panel=path2panel)
-    SCORING_TYPE_FULL = get_full_SCORING_TYPE(path2panel=path2panel)
+    # BM_TYPE_FULL = get_BM_TYPE_FULL(path2panel=path2panel)
+    # SCORING_TYPE_FULL = get_full_SCORING_TYPE(path2panel=path2panel)
 
     panel_demog = variant_prep(path2panel, variant_type='demographic')
     panel_clinpath = variant_prep(path2panel, variant_type='clinicopathology')
@@ -279,6 +361,7 @@ def add_demographic_clinicopath_results(path2panel, panel_results_df, metadata_d
 def main(args):
 
     # Get BM_TYPE header
+    global BM_TYPE_FULL, SCORING_TYPE_FULL
     BM_TYPE_FULL = get_BM_TYPE_FULL(path2panel=args.panel)
     SCORING_TYPE_FULL = get_full_SCORING_TYPE(path2panel=args.panel)
     
