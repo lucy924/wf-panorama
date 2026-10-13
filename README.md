@@ -266,7 +266,7 @@ Profiles are selected with the `-profile` flag on the command line. Combine an *
 | `singularity` | Singularity (traditional HPC) |
 | `apptainer` | Apptainer (newer HPC systems, open-source Singularity fork) |
 
-> [!INFO]
+> [!TIP]  
 > The `local` profile uses apptainer/singularity which should be included in your conda environment.
 
 > [!WARNING]  
@@ -454,7 +454,7 @@ nextflow run Genomic-and-Epigenomic-Research-Lab-NZ/wf-panorama \
     -profile slurm,singularity \
     -resume
 ```
-Expected runtime: a couple of hours for `wf-human-variation`, a couple of hours for `modification_calling`. Test data has taken ~4-5 hours total.
+Expected runtime: a couple of hours for `wf-human-variation`, a couple of hours for `modification_calling`. Test data has taken ~4-8 hours total.
 
 ### Outputs for clin_trial and clinical modes
 
@@ -651,6 +651,8 @@ This protocol currently uses [epi2me-labs/wf-human-variation v2.6.0](https://git
 - [ ]  Add option for custom immune infiltrate references
 - [ ]  Improve fusion processing
   - [ ]  Output merged bam produced during wf-human-variation to enable manual visualisation
+- [ ] Improve "Molecular Group" handling (requires clinical input)
+- [ ] Pre-clinical trial enabling practical usage optimisation
 <!-- [ ] Add immune infiltrate barplot to outputs and clinical report -->
 <!-- [ ] update to more recent version of wf-human-variation -->
 
@@ -664,12 +666,12 @@ Reasons not to use wf-somatic-variation
 ## 📜 Pipeline History
 
 Panorama was initially designed as part of the Doctoral thesis entitled:  
-**Epigenetic Consequences of BCG Immunotherapy In Bladder Cancer**  
+"**Epigenetic Consequences of BCG Immunotherapy In Bladder Cancer**"  
 For full details on the development of this pipeline the relevant chapter is "Chapter Four: Multi-biomarker discovery using nanopore sequencing technology: proof-of-concept" and can be found in the [Otago archives](https://hdl.handle.net/10523/48489). The original development of the pipeline used [Snakemake](https://snakemake.readthedocs.io/en/stable/) and can be found on [Lucy's github repo](https://github.com/lucy924/nanopore_multiBM_pipeline) with associated material [here](https://github.com/lucy924/Multi-biomarker-ONT-project).
 
 ## 🎉 Acknowledgements
 
-Many thanks go to the funders of this project, The Barbara Basham Medical Charitable Trust. Read about the origin of the trust [here](https://wellington.govt.nz/arts-and-culture/heritage/historic-public-memorials/aunt-daisy).
+Many thanks go to the funders of this project, the Barbara Basham Medical Charitable Trust. Read about the origin of the trust [here](https://wellington.govt.nz/arts-and-culture/heritage/historic-public-memorials/aunt-daisy).
 
 ## 📚 References
 
