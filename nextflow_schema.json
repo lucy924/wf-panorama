@@ -236,7 +236,7 @@
                 "sample_outdir": {
                     "type": "string",
                     "format": "directory-path",
-                    "description": "Sample-level output directory for clin_trial_mode and clinical_mode. Defaults to <project_outdir>/<sample>.",
+                    "description": "Sample-level output directory for clin_trial_mode and clinical_mode. Defaults to <current working directory>/<sample>.",
                     "hidden": true
                 }
             }
