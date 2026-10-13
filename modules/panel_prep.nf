@@ -35,7 +35,7 @@ process get_chrom_sizes {
     cpus 1
     memory '2 GB'
     time '15m'
-    container "file://${projectDir}/containers/general.sandbox"
+    container "file://${projectDir}/containers/general.sif"
     publishDir "resources", mode: 'copy'
 
     input:
@@ -86,7 +86,7 @@ process make_panel_bed {
         path panel_csv
         path immune_ref_file
         path epic_locs_file
-        path msk_impact_file
+        path msk_impact_file   // real MSK panel, or the assets/NO_FILE placeholder
         val  final_align_bed_name
         val allEPIC
 
@@ -96,7 +96,7 @@ process make_panel_bed {
 
     script:
     def allEpicFlag = allEPIC ? '--all-epic' : ''
-    def mskImpactFlag = msk_impact_file.name != 'NO_MSK_FILE' ? "--msk_impact ${msk_impact_file}" : ''
+    def mskImpactFlag = msk_impact_file.name != 'NO_FILE' ? "--msk_impact ${msk_impact_file}" : ''
     """
     python3 ${projectDir}/bin/make_panel_bed.py \
         --panel-csv ${panel_csv} \
@@ -221,9 +221,10 @@ workflow panel_prep {
         ref_idx_ch      = Channel.fromPath(ref_fai.toString(), checkIfExists: true)
         chrom_sizes_ch  = Channel.fromPath(chrom_sizes_path.toString(), checkIfExists: true)
         epic_locs_ch    = Channel.fromPath(epic_locs.toString(), checkIfExists: true)
+        // Use a real, committed placeholder file so Nextflow can stage it when no MSK panel is requested
         msk_impact_ch    = params.msk_impact_panel 
                             ? Channel.fromPath(msk_impact_panel.toString(), checkIfExists: true)
-                            : Channel.of(file("NO_MSK_FILE"))
+                            : Channel.fromPath("${projectDir}/assets/NO_FILE", checkIfExists: true)
         // immune_ref_ch = Channel.of(immune_ref)
 
         // 1. Index the reference
